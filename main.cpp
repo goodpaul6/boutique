@@ -159,12 +159,24 @@ private:
 };
 
 int main(int argc, char** argv) {
-    auto server = Socket::create_listener(5000);
+    auto server = Socket::create_listener(8080);
+    auto client = Socket::connect("localhost", "8080");
 
     for(;;) {
-        auto client = server.accept();
+        auto accepted_client = server.accept();
 
-        std::cout << "Accepted client.\n";
+        if(accepted_client) {
+            std::cout << "Accepted client.\n";
+
+            int len = client.send("hello", sizeof("hello"));
+
+            char buf[128];
+            len = accepted_client->read(buf, sizeof(buf));
+
+            if(len > 0) {
+                std::cout << std::string{buf, static_cast<size_t>(len)} << '\n';
+            }
+        }
     }
 
     return 0;
