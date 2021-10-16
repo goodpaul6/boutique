@@ -12,6 +12,7 @@ endif()
 # Core language
 set(SOURCES
     main.cpp
-    socket.cpp)
+    socket.cpp
+    io_context.cpp)
 
 add_executable(boutique ${SOURCES})

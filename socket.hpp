@@ -20,8 +20,10 @@ struct Socket {
 
     std::optional<Socket> accept();
 
-    int read(char* buf, int maxlen);
+    int recv(char* buf, int maxlen);
     int send(const char* buf, int maxlen);
+
+    int fd() const;
 
 private:
     int m_fd = -1;

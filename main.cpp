@@ -4,31 +4,35 @@
 // predefined key prefixes and boutique stores and transmits them optimally.
 
 #include <iostream>
+#include <optional>
 
+#include "io_context.hpp"
 #include "socket.hpp"
 
 int main(int argc, char** argv) {
     using namespace boutique;
 
+    IOContext io_context;
+
     auto server = Socket::listen(8080);
     auto client = Socket::connect("localhost", 8080);
 
-    for (;;) {
-        auto accepted_client = server.accept();
+    char buf[128];
 
-        if (accepted_client) {
-            std::cout << "Accepted client.\n";
+    std::optional<Socket> accepted_client;
 
-            int len = client.send("hello", sizeof("hello"));
+    io_context.async_accept(server, [&](Socket res) {
+        accepted_client = std::move(res);
 
-            char buf[128];
-            len = accepted_client->read(buf, sizeof(buf));
+        io_context.async_recv(*accepted_client, buf, sizeof(buf), [&](int len) {
+            std::cout << std::string{buf, static_cast<size_t>(len)} << '\n';
+        });
+    });
 
-            if (len > 0) {
-                std::cout << std::string{buf, static_cast<size_t>(len)} << '\n';
-            }
-        }
-    }
+    io_context.async_send(client, "hello", sizeof("hello"),
+                          [&](int res) { std::cout << "Sent " << res << " bytes.\n"; });
+
+    io_context.run();
 
     return 0;
 }

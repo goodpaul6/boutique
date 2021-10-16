@@ -122,8 +122,8 @@ std::optional<Socket> Socket::accept() {
     return Socket{fd};
 }
 
-int Socket::read(char* buf, int maxlen) {
-    int r = ::read(m_fd, buf, maxlen);
+int Socket::recv(char* buf, int maxlen) {
+    int r = ::recv(m_fd, buf, maxlen, 0);
 
     if (r < 0) {
         if (errno == EWOULDBLOCK || errno == EAGAIN) {
@@ -149,5 +149,7 @@ int Socket::send(const char* buf, int maxlen) {
 
     return r;
 }
+
+int Socket::fd() const { return m_fd; }
 
 }  // namespace boutique
