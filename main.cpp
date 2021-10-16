@@ -7,6 +7,7 @@
 #include <optional>
 
 #include "io_context.hpp"
+#include "io_helpers.hpp"
 #include "socket.hpp"
 
 int main(int argc, char** argv) {
@@ -29,8 +30,8 @@ int main(int argc, char** argv) {
         });
     });
 
-    io_context.async_send(client, "hello", sizeof("hello"),
-                          [&](int res) { std::cout << "Sent " << res << " bytes.\n"; });
+    async_send_all(io_context, client, "hello", sizeof("hello"),
+                   [&](int res) { std::cout << "Sent " << res << " bytes.\n"; });
 
     io_context.run();
 

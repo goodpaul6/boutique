@@ -13,6 +13,7 @@ endif()
 set(SOURCES
     main.cpp
     socket.cpp
-    io_context.cpp)
+    io_context.cpp
+    io_helpers.cpp)
 
 add_executable(boutique ${SOURCES})
