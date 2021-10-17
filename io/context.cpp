@@ -1,4 +1,4 @@
-#include "io_context.hpp"
+#include "context.hpp"
 
 #include <sys/select.h>
 #include <cassert>
@@ -8,6 +8,8 @@
 namespace boutique {
 
 void IOContext::async_recv(Socket& socket, char* buf, size_t maxlen, IntFn fn) {
+    assert(fn);
+
     RecvOp op;
 
     op.socket = &socket;
@@ -19,6 +21,8 @@ void IOContext::async_recv(Socket& socket, char* buf, size_t maxlen, IntFn fn) {
 }
 
 void IOContext::async_send(Socket& socket, const char* buf, size_t maxlen, IntFn fn) {
+    assert(fn);
+
     SendOp op;
 
     op.socket = &socket;
@@ -30,6 +34,8 @@ void IOContext::async_send(Socket& socket, const char* buf, size_t maxlen, IntFn
 }
 
 void IOContext::async_accept(Socket& socket, SocketFn fn) {
+    assert(fn);
+
     AcceptOp op;
 
     op.socket = &socket;
@@ -50,7 +56,15 @@ void IOContext::run() {
 
         int maxfd = 0;
 
-        for (auto& op : m_recv) {
+        auto recv_copy = m_recv;
+        auto send_copy = m_send;
+        auto accept_copy = m_accept;
+
+        m_recv.clear();
+        m_send.clear();
+        m_accept.clear();
+
+        for (auto& op : recv_copy) {
             if (op.socket->fd() > maxfd) {
                 maxfd = op.socket->fd();
             }
@@ -58,7 +72,7 @@ void IOContext::run() {
             FD_SET(op.socket->fd(), &read_fds);
         }
 
-        for (auto& op : m_send) {
+        for (auto& op : send_copy) {
             if (op.socket->fd() > maxfd) {
                 maxfd = op.socket->fd();
             }
@@ -66,7 +80,7 @@ void IOContext::run() {
             FD_SET(op.socket->fd(), &write_fds);
         }
 
-        for (auto& op : m_accept) {
+        for (auto& op : accept_copy) {
             if (op.socket->fd() > maxfd) {
                 maxfd = op.socket->fd();
             }
@@ -77,21 +91,21 @@ void IOContext::run() {
         // TODO Receive timeout
         ::select(maxfd + 1, &read_fds, &write_fds, nullptr, nullptr);
 
-        for (auto& op : m_recv) {
+        for (auto& op : recv_copy) {
             if (FD_ISSET(op.socket->fd(), &read_fds)) {
                 op.fn(op.socket->recv(op.buf, op.maxlen));
                 op.complete = true;
             }
         }
 
-        for (auto& op : m_send) {
+        for (auto& op : send_copy) {
             if (FD_ISSET(op.socket->fd(), &write_fds)) {
                 op.fn(op.socket->send(op.buf, op.maxlen));
                 op.complete = true;
             }
         }
 
-        for (auto& op : m_accept) {
+        for (auto& op : accept_copy) {
             if (FD_ISSET(op.socket->fd(), &read_fds)) {
                 auto opt_socket = op.socket->accept();
 
@@ -106,13 +120,17 @@ void IOContext::run() {
 
         const auto is_complete = [](auto&& op) { return op.complete; };
 
-        auto recv_end = std::remove_if(m_recv.begin(), m_recv.end(), is_complete);
-        auto send_end = std::remove_if(m_send.begin(), m_send.end(), is_complete);
-        auto accept_end = std::remove_if(m_accept.begin(), m_accept.end(), is_complete);
+        auto recv_end = std::remove_if(recv_copy.begin(), recv_copy.end(), is_complete);
+        auto send_end = std::remove_if(send_copy.begin(), send_copy.end(), is_complete);
+        auto accept_end = std::remove_if(accept_copy.begin(), accept_copy.end(), is_complete);
 
-        m_recv.erase(recv_end, m_recv.end());
-        m_send.erase(send_end, m_send.end());
-        m_accept.erase(accept_end, m_accept.end());
+        recv_copy.erase(recv_end, recv_copy.end());
+        send_copy.erase(send_end, send_copy.end());
+        accept_copy.erase(accept_end, accept_copy.end());
+
+        m_recv.insert(m_recv.end(), recv_copy.begin(), recv_copy.end());
+        m_send.insert(m_send.end(), send_copy.begin(), send_copy.end());
+        m_accept.insert(m_accept.end(), accept_copy.begin(), accept_copy.end());
     }
 }
 

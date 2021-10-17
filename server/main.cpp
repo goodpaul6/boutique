@@ -4,13 +4,13 @@
 #include <thread>
 #include <vector>
 
-#include "bind_front.hpp"
-#include "io_context.hpp"
-#include "io_helpers.hpp"
-#include "socket.hpp"
+#include "core/bind_front.hpp"
+
+#include "io/context.hpp"
+#include "io/helpers.hpp"
+#include "io/socket.hpp"
 
 using namespace boutique;
-using namespace std::placeholders;
 
 namespace {
 
