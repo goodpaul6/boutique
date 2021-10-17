@@ -8,6 +8,7 @@
 namespace boutique {
 
 void IOContext::async_recv(Socket& socket, char* buf, size_t maxlen, IntFn fn) {
+    assert(&socket);
     assert(fn);
 
     RecvOp op;
@@ -21,6 +22,7 @@ void IOContext::async_recv(Socket& socket, char* buf, size_t maxlen, IntFn fn) {
 }
 
 void IOContext::async_send(Socket& socket, const char* buf, size_t maxlen, IntFn fn) {
+    assert(&socket);
     assert(fn);
 
     SendOp op;
@@ -34,6 +36,7 @@ void IOContext::async_send(Socket& socket, const char* buf, size_t maxlen, IntFn
 }
 
 void IOContext::async_accept(Socket& socket, SocketFn fn) {
+    assert(&socket);
     assert(fn);
 
     AcceptOp op;
