@@ -1,32 +1,60 @@
 #include <iostream>
+#include <memory>
 #include <optional>
+#include <thread>
+#include <vector>
 
+#include "bind_front.hpp"
 #include "io_context.hpp"
 #include "io_helpers.hpp"
 #include "socket.hpp"
+
+using namespace boutique;
+using namespace std::placeholders;
+
+namespace {
+
+struct Server {
+    Server(IOContext& ioc, unsigned short port) : m_ioc{ioc}, m_socket{Socket::listen(port)} {}
+
+    void start() { m_ioc.async_accept(m_socket, bind_front(&Server::accept_handler, this)); }
+
+private:
+    IOContext& m_ioc;
+    Socket m_socket;
+    std::vector<std::unique_ptr<Socket>> m_clients;
+
+    char m_buf[128];
+
+    void recv_handler(int client_idx, int len) {
+        std::cout << std::string{m_buf, static_cast<size_t>(len)} << '\n';
+
+        m_ioc.async_recv(*m_clients[client_idx], m_buf, sizeof(m_buf),
+                         bind_front(&Server::recv_handler, this, client_idx));
+    }
+
+    void accept_handler(Socket socket) {
+        size_t client_idx = m_clients.size();
+
+        m_clients.emplace_back(std::make_unique<Socket>(std::move(socket)));
+
+        m_ioc.async_recv(*m_clients.back(), m_buf, sizeof(m_buf),
+                         bind_front(&Server::recv_handler, this, client_idx));
+
+        m_ioc.async_accept(m_socket, bind_front(&Server::accept_handler, this));
+    }
+};
+
+}  // namespace
 
 int main(int argc, char** argv) {
     using namespace boutique;
 
     IOContext io_context;
 
-    auto server = Socket::listen(8080);
-    auto client = Socket::connect("localhost", 8080);
+    Server server{io_context, 8080};
 
-    char buf[128];
-
-    std::optional<Socket> accepted_client;
-
-    io_context.async_accept(server, [&](Socket res) {
-        accepted_client = std::move(res);
-
-        io_context.async_recv(*accepted_client, buf, sizeof(buf), [&](int len) {
-            std::cout << std::string{buf, static_cast<size_t>(len)} << '\n';
-        });
-    });
-
-    async_send_all(io_context, client, "hello", sizeof("hello"),
-                   [&](int res) { std::cout << "Sent " << res << " bytes.\n"; });
+    server.start();
 
     io_context.run();
 
