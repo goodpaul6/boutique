@@ -15,12 +15,15 @@ using namespace boutique;
 namespace {
 
 struct Server {
-    Server(IOContext& ioc, unsigned short port) : m_ioc{ioc}, m_socket{Socket::listen(port)} {}
+    Server(unsigned short port) : m_socket{Socket::listen(port)} {}
 
-    void start() { m_ioc.async_accept(m_socket, bind_front(&Server::accept_handler, this)); }
+    void run() {
+        m_ioc.async_accept(m_socket, bind_front(&Server::accept_handler, this));
+        m_ioc.run();
+    }
 
 private:
-    IOContext& m_ioc;
+    IOContext m_ioc;
     Socket m_socket;
     std::vector<std::unique_ptr<Socket>> m_clients;
 
@@ -72,13 +75,9 @@ private:
 int main(int argc, char** argv) {
     using namespace boutique;
 
-    IOContext io_context;
+    Server server{static_cast<unsigned short>(std::stoi(argv[1]))};
 
-    Server server{io_context, 8080};
-
-    server.start();
-
-    io_context.run();
+    server.run();
 
     return 0;
 }
