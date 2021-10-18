@@ -25,6 +25,9 @@ struct Socket {
 
     int fd() const;
 
+    void set_non_blocking(bool enabled);
+    void set_no_delay(bool enabled);
+
 private:
     int m_fd = -1;
 };

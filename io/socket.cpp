@@ -1,10 +1,13 @@
 #include "socket.hpp"
 
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netdb.h>
+#include <netinet/tcp.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
 #include <stdexcept>
 #include <system_error>
 #include <utility>
@@ -151,5 +154,30 @@ int Socket::send(const char* buf, int maxlen) {
 }
 
 int Socket::fd() const { return m_fd; }
+
+void Socket::set_non_blocking(bool enabled) {
+    int flags = fcntl(m_fd, F_GETFL, 0);
+
+    if (flags < 0) {
+        throw_errno("Failed to get fnctl flags on socket");
+    }
+
+    if (enabled) {
+        flags |= O_NONBLOCK;
+    } else {
+        flags &= ~O_NONBLOCK;
+    }
+
+    if (fcntl(m_fd, F_SETFL, flags) < 0) {
+        throw_errno("Failed to set fnctl flags on socket");
+    }
+}
+
+void Socket::set_no_delay(bool enabled) {
+    int opt = static_cast<int>(enabled);
+    if (setsockopt(m_fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
+        throw_errno("Failed to set no delay on socket");
+    }
+}
 
 }  // namespace boutique
