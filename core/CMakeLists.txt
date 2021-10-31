@@ -1,6 +1,8 @@
 set(SOURCES
     logger.cpp
-    streambuf.cpp)
+    streambuf.cpp
+    const_buffer.cpp
+    serialize.cpp)
 
 add_library(core ${SOURCES})
 

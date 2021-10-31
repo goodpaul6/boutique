@@ -1,8 +1,11 @@
+#include <cassert>
 #include <iostream>
 #include <string>
 #include <string_view>
 
+#include "core/streambuf.hpp"
 #include "io/socket.hpp"
+#include "protocol/binary_protocol.hpp"
 
 using namespace boutique;
 
@@ -13,56 +16,107 @@ int main(int argc, char** argv) {
 
     std::string str;
 
+    StreamBuf stream;
+
     for (;;) {
+        assert(stream.empty());
+
+        std::cout << "> ";
+
         std::getline(std::cin, str);
         if (str == "quit") {
             std::cout << "Goodbye.\n";
             break;
         }
 
-        str += '\n';
+        // TODO Refactor this since its copied from the client_handler.cpp
+        std::vector<char> buf;
+
+        auto buf_writer = [&](size_t len) {
+            buf.resize(buf.size() + len);
+            auto* ptr = buf.data() + buf.size() - len;
+
+            return ptr;
+        };
+
+        Command cmd;
+
+        if (str == "get") {
+            std::cout << "key > ";
+
+            std::getline(std::cin, str);
+
+            cmd = GetCommand{str};
+        } else if (str == "set") {
+            std::cout << "key > ";
+
+            std::getline(std::cin, str);
+
+            std::string value;
+
+            std::cout << "value > ";
+
+            std::getline(std::cin, value);
+
+            cmd = SetCommand{str, value};
+        } else {
+            std::cout << "Unknown command.\n";
+            continue;
+        }
+
+        write(buf_writer, cmd);
 
         int n = 0;
 
         do {
-            n += client.send(str.c_str(), str.size());
+            int r = client.send(buf.data() + n, buf.size() - n);
 
-            char buf[128];
-
-            int len = 0;
-
-            const auto flush_buf = [&] {
-                std::cout << std::string_view{buf, static_cast<size_t>(len)};
-                len = 0;
-            };
-
-            bool stop = false;
-
-            while (!stop) {
-                if (len >= sizeof(buf)) {
-                    flush_buf();
-                }
-
-                int new_r = client.recv(buf + len, sizeof(buf) - len);
-
-                if (new_r == 0) {
-                    break;
-                }
-
-                len += new_r;
-
-                for (int i = 0; i < len; ++i) {
-                    if (buf[i] == '\0') {
-                        len -= 1;
-                        stop = true;
-                        break;
-                    }
-                }
+            if (r == 0) {
+                std::cerr << "Failed to send command.\n";
+                break;
             }
 
-            flush_buf();
-            std::cout << '\n';
-        } while (n < str.size());
+            n += r;
+        } while (n < buf.size());
+
+        // Keep reading until we get one response
+        char recv_buf[128];
+
+        do {
+            n = client.recv(recv_buf, sizeof(recv_buf));
+
+            stream.append(recv_buf, n);
+
+            ConstBuffer res_buf{stream};
+
+            Response res;
+
+            auto r = read(res_buf, res);
+
+            if (r == ReadResult::INVALID) {
+                std::cerr << "Received invalid response from server.\n";
+                stream.consume(stream.size());
+                break;
+            } else if (r == ReadResult::SUCCESS) {
+                std::visit(
+                    [](auto&& v) {
+                        using T = std::decay_t<decltype(v)>;
+
+                        if constexpr (std::is_same_v<T, InvalidCommandResponse>) {
+                            std::cerr << "Apparently we sent an invalid command.\n";
+                        } else if constexpr (std::is_same_v<T, SuccessResponse>) {
+                            std::cout << "Success.\n";
+                        } else if constexpr (std::is_same_v<T, NotFoundResponse>) {
+                            std::cout << "Not found.\n";
+                        } else if constexpr (std::is_same_v<T, FoundResponse>) {
+                            std::cout << v.value << '\n';
+                        }
+                    },
+                    res);
+
+                stream.consume(res_buf.data - stream.data());
+            }
+        } while (!stream.empty());
     }
 
     return 0;

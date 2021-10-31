@@ -1,21 +1,16 @@
 #include "client_handler.hpp"
 
-#include <cctype>
+#include <cstring>
 #include <memory>
+#include <optional>
 #include <string_view>
 
 #include "core/bind_front.hpp"
+#include "core/const_buffer.hpp"
 #include "core/logger.hpp"
 #include "io/helpers.hpp"
+#include "protocol/binary_protocol.hpp"
 #include "server.hpp"
-
-namespace {
-
-const char SUCCESS[] = "SUCCESS";
-const char INVALID_COMMAND[] = "INVALID_COMMAND";
-const char NOT_FOUND[] = "NOT_FOUND";
-
-}  // namespace
 
 namespace boutique {
 
@@ -44,95 +39,86 @@ void ClientHandler::recv_handler(int len) {
 
     m_stream.append(m_buf, len);
 
-    const auto find_first_space = [](auto& str) { return str.find_first_of(" \t\r\n"); };
+    ConstBuffer cmd_buf{m_stream};
 
-    bool stop = false;
+    Command cmd;
 
-    while (!m_stream.empty() && !stop) {
-        while (!m_stream.empty() && std::isspace(*m_stream.data())) {
-            m_stream.consume(1);
+    for (;;) {
+        auto rc_res = read(cmd_buf, cmd);
+
+        if (rc_res == ReadResult::INCOMPLETE) {
+            break;
         }
 
-        switch (m_state) {
-            case State::COMMAND: {
-                std::string_view cmd{m_stream.data(), m_stream.size()};
+        auto buf = std::make_shared<std::vector<char>>();
 
-                auto space_pos = find_first_space(cmd);
+        auto buf_writer = [&](size_t len) {
+            buf->resize(buf->size() + len);
+            auto* ptr = buf->data() + buf->size() - len;
 
-                if (space_pos != std::string_view::npos) {
-                    m_cmd = cmd.substr(0, space_pos);
-                    m_stream.consume(space_pos);
+            return ptr;
+        };
 
-                    if (m_cmd != "GET" && m_cmd != "SET") {
-                        async_send_all(m_server->io_context(), m_socket, INVALID_COMMAND,
-                                       sizeof(INVALID_COMMAND), [](int) {});
-                    } else {
-                        m_state = State::KEY;
-                    }
-                } else {
-                    stop = true;
-                }
-            } break;
+        if (rc_res == ReadResult::INVALID) {
+            Response res = InvalidCommandResponse{};
 
-            case State::KEY: {
-                std::string_view key{m_stream.data(), m_stream.size()};
+            write(buf_writer, res);
 
-                auto space_pos = find_first_space(key);
+            auto* buf_data = buf->data();
+            auto buf_size = buf->size();
 
-                if (space_pos != std::string::npos) {
-                    m_key = key.substr(0, space_pos);
-                    m_stream.consume(space_pos);
+            // Move the buffer into the function so it is kept alive until sent
+            async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
+                           [buf = std::move(buf)](int res) {});
 
-                    if (m_cmd == "GET") {
-                        auto found = m_server->dict().get(m_key);
+            m_stream.consume(cmd_buf.data - m_stream.data());
+            break;
+        } else if (rc_res == ReadResult::SUCCESS) {
+            std::visit(
+                [&](auto&& v) {
+                    using T = std::decay_t<decltype(v)>;
 
-                        if (found) {
-                            // TODO
-                            auto res = std::make_shared<std::string>(*found);
+                    if constexpr (std::is_same_v<T, GetCommand>) {
+                        auto value = m_server->dict().get(std::string{v.key});
 
-                            auto* str = res->c_str();
-                            auto size = res->size() + 1;
+                        if (value) {
+                            Response res = FoundResponse{*value};
 
-                            // We just keep the value alive
-                            async_send_all(m_server->io_context(), m_socket, str, size,
-                                           [keep_alive = std::move(res)](int) {});
+                            write(buf_writer, res);
+
+                            auto* buf_data = buf->data();
+                            auto buf_size = buf->size();
+
+                            async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
+                                           [buf = std::move(buf)](int res) {});
                         } else {
-                            BOUTIQUE_LOG_INFO("Key {} not found.", m_key);
+                            Response res = NotFoundResponse{};
 
-                            async_send_all(m_server->io_context(), m_socket, NOT_FOUND,
-                                           sizeof(NOT_FOUND), [](int) {});
+                            write(buf_writer, res);
+
+                            auto* buf_data = buf->data();
+                            auto buf_size = buf->size();
+
+                            async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
+                                           [buf = std::move(buf)](int res) {});
                         }
+                    } else if constexpr (std::is_same_v<T, SetCommand>) {
+                        m_server->dict().set(std::string{v.key}, std::string{v.value});
 
-                        m_state = State::COMMAND;
-                    } else {
-                        m_state = State::VALUE;
+                        Response res = SuccessResponse{};
+
+                        write(buf_writer, res);
+
+                        auto* buf_data = buf->data();
+                        auto buf_size = buf->size();
+
+                        async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
+                                       [buf = std::move(buf)](int res) {});
                     }
-                } else {
-                    stop = true;
-                }
-            } break;
+                },
+                cmd);
 
-            case State::VALUE: {
-                std::string_view value{m_stream.data(), m_stream.size()};
-
-                auto space_pos = find_first_space(value);
-
-                if (space_pos != std::string::npos) {
-                    m_value = value.substr(0, space_pos);
-                    m_stream.consume(space_pos);
-
-                    if (m_cmd == "SET") {
-                        m_server->dict().set(m_key, m_value);
-
-                        async_send_all(m_server->io_context(), m_socket, SUCCESS, sizeof(SUCCESS),
-                                       [](int) {});
-                    }
-
-                    m_state = State::COMMAND;
-                } else {
-                    stop = true;
-                }
-            } break;
+            m_stream.consume(cmd_buf.data - m_stream.data());
         }
     }
 

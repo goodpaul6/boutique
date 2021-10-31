@@ -19,8 +19,6 @@ struct ClientHandler {
     bool closed() const;
 
 private:
-    enum class State { COMMAND, KEY, VALUE };
-
     // TODO Track open/close state on the socket itself
     bool m_closed = false;
 
@@ -30,12 +28,6 @@ private:
     char m_buf[128];
 
     StreamBuf m_stream;
-
-    State m_state = State::COMMAND;
-
-    std::string m_cmd;
-    std::string m_key;
-    std::string m_value;
 
     void recv_handler(int len);
 };

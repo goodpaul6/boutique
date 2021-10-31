@@ -3,4 +3,4 @@ set(SOURCES
 
 add_executable(test_client ${SOURCES})
 
-target_link_libraries(test_client PRIVATE core io)
+target_link_libraries(test_client PRIVATE core io protocol)
