@@ -19,7 +19,7 @@ SET key value
 ## TODO
 
 + Set up basic commands with an inline parser
-- Binary protocol
++ Binary protocol
 - Key expiry
     - Involves implement (async) timers, see timerfd in linux
 - Gracefully handle non-graceful disconnects from the client

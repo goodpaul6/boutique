@@ -60,9 +60,7 @@ void ClientHandler::recv_handler(int len) {
         };
 
         if (rc_res == ReadResult::INVALID) {
-            Response res = InvalidCommandResponse{};
-
-            write(buf_writer, res);
+            write(buf_writer, InvalidCommandResponse{});
 
             auto* buf_data = buf->data();
             auto buf_size = buf->size();
@@ -82,9 +80,7 @@ void ClientHandler::recv_handler(int len) {
                         auto value = m_server->dict().get(std::string{v.key});
 
                         if (value) {
-                            Response res = FoundResponse{*value};
-
-                            write(buf_writer, res);
+                            write(buf_writer, FoundResponse{*value});
 
                             auto* buf_data = buf->data();
                             auto buf_size = buf->size();
@@ -92,9 +88,7 @@ void ClientHandler::recv_handler(int len) {
                             async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
                                            [buf = std::move(buf)](int res) {});
                         } else {
-                            Response res = NotFoundResponse{};
-
-                            write(buf_writer, res);
+                            write(buf_writer, NotFoundResponse{});
 
                             auto* buf_data = buf->data();
                             auto buf_size = buf->size();
@@ -105,9 +99,7 @@ void ClientHandler::recv_handler(int len) {
                     } else if constexpr (std::is_same_v<T, SetCommand>) {
                         m_server->dict().set(std::string{v.key}, std::string{v.value});
 
-                        Response res = SuccessResponse{};
-
-                        write(buf_writer, res);
+                        write(buf_writer, SuccessResponse{});
 
                         auto* buf_data = buf->data();
                         auto buf_size = buf->size();
