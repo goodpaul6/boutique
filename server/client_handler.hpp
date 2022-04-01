@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/streambuf.hpp"
-
 #include "io/socket.hpp"
 
 namespace boutique {
