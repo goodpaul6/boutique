@@ -1,8 +1,10 @@
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <optional>
 
 #include "context.hpp"
+#include "helpers.hpp"
 #include "socket.hpp"
 #include "timer.hpp"
 
@@ -42,6 +44,26 @@ int main(int argc, char** argv) {
     ctx.run();
 
     assert(accepted_sock);
+
+    const char s[] = "hello";
+
+    async_send_all(ctx, client_sock, s, sizeof(s), [&](int res) {
+        assert(res == sizeof(s));
+        ctx.stop();
+    });
+
+    ctx.run();
+
+    char buf[sizeof(s)];
+
+    async_recv_all(ctx, *accepted_sock, buf, sizeof(buf), [&](int res) {
+        assert(res == sizeof(s));
+        assert(std::memcmp(buf, s, sizeof(buf)) == 0);
+
+        ctx.stop();
+    });
+
+    ctx.run();
 
     return 0;
 }
