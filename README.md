@@ -19,8 +19,9 @@ SET key value
 
 - [x] Set up basic commands with an inline parser
 - [x] Binary protocol
+- [ ] Add support for timers in io (see timerfd on Linux)
 - [ ] Allow defining schemas for key prefixes
-- [ ] Key expiry using async timers (see timerfd on Linux)
+- [ ] Key expiry using async timers
 - [ ] Separate server from database so that the latter can be embedded in-process
 - [ ] Gracefully handle non-graceful disconnects from the client
 - [ ] Create a new exception type SocketError
