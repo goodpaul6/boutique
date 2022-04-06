@@ -19,7 +19,9 @@ SET key value
 
 - [x] Set up basic commands with an inline parser
 - [x] Binary protocol
-- [ ] Add support for timers in io (see timerfd on Linux)
+- [ ] Add support for timers to io (see timerfd on Linux)
+- [ ] Add async_connect to io
+- [ ] Add async_listen to io
 - [ ] Allow defining schemas for key prefixes
 - [ ] Key expiry using async timers
 - [ ] Separate server from database so that the latter can be embedded in-process
