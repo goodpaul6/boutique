@@ -1,4 +1,0 @@
-GET test
-SET test test
-GET test
-quit
