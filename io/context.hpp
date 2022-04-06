@@ -6,6 +6,7 @@
 namespace boutique {
 
 struct Socket;
+struct Timer;
 
 struct IOContext {
     using IntFn = std::function<void(int)>;
@@ -14,6 +15,8 @@ struct IOContext {
     void async_recv(Socket& socket, char* buf, size_t maxlen, IntFn fn);
     void async_send(Socket& socket, const char* buf, size_t maxlen, IntFn fn);
     void async_accept(Socket& socket, SocketFn fn);
+
+    void async_wait(Timer& timer, IntFn fn);
 
     void run();
 
@@ -25,7 +28,7 @@ private:
         char* buf = nullptr;
         size_t maxlen = 0;
 
-        std::function<void(int recv_res)> fn;
+        IntFn fn;
 
         bool complete = false;
     };
@@ -35,7 +38,7 @@ private:
         const char* buf = nullptr;
         size_t maxlen = 0;
 
-        std::function<void(int send_res)> fn;
+        IntFn fn;
 
         bool complete = false;
     };
@@ -43,7 +46,15 @@ private:
     struct AcceptOp {
         Socket* socket = nullptr;
 
-        std::function<void(Socket accepted_socket)> fn;
+        SocketFn fn;
+
+        bool complete = false;
+    };
+
+    struct WaitOp {
+        Timer* timer = nullptr;
+
+        IntFn fn;
 
         bool complete = false;
     };
@@ -54,6 +65,7 @@ private:
     std::vector<RecvOp> m_recv;
     std::vector<SendOp> m_send;
     std::vector<AcceptOp> m_accept;
+    std::vector<WaitOp> m_wait;
 };
 
 }  // namespace boutique
