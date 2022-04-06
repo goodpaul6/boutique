@@ -18,7 +18,7 @@ namespace boutique {
 
 Socket::Socket(int fd) : m_fd{fd} {}
 
-Socket::Socket(const ListenParams& params) : m_fd{-1} {
+Socket::Socket(const ListenParams& params) {
     int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 
     if (fd < 0) {
@@ -50,7 +50,7 @@ Socket::Socket(const ListenParams& params) : m_fd{-1} {
     m_fd = fd;
 }
 
-Socket::Socket(const ConnectParams& params) : m_fd{-1} {
+Socket::Socket(const ConnectParams& params) {
     int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 
     if (fd < 0) {
