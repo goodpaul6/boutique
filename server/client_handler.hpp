@@ -5,7 +5,6 @@
 
 namespace boutique {
 
-struct Dict;
 struct IOContext;
 struct Server;
 
@@ -32,4 +31,3 @@ private:
 };
 
 }  // namespace boutique
-
