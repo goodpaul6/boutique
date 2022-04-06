@@ -2,11 +2,10 @@
 
 #include <list>
 
-#include "io/context.hpp"
-#include "io/socket.hpp"
-
 #include "client_handler.hpp"
 #include "dict.hpp"
+#include "io/context.hpp"
+#include "io/socket.hpp"
 
 namespace boutique {
 

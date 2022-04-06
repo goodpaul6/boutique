@@ -3,10 +3,13 @@
 #include <system_error>
 
 #include "core/bind_front.hpp"
+#include "core/logger.hpp"
 
 namespace boutique {
 
-Server::Server(unsigned short port) : m_socket{Socket::listen(port)} {}
+Server::Server(unsigned short port) : m_socket{Socket::listen(port)} {
+    BOUTIQUE_LOG_INFO("Listening on port {}", port);
+}
 
 IOContext& Server::io_context() { return m_ioc; }
 
