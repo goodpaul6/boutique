@@ -60,6 +60,8 @@ void IOContext::async_wait(Timer& timer, IntFn fn) {
 void IOContext::stop() { m_stop = true; }
 
 void IOContext::run() {
+    m_stop = false;
+
     while (!m_stop) {
         fd_set read_fds;
         fd_set write_fds;

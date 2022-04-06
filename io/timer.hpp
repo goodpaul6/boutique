@@ -6,8 +6,8 @@ namespace boutique {
 
 struct Timer {
     struct Params {
-        std::chrono::nanoseconds init_expiration;
-        std::chrono::nanoseconds interval;
+        std::chrono::nanoseconds init_expiration = std::chrono::nanoseconds::zero();
+        std::chrono::nanoseconds interval = std::chrono::nanoseconds::zero();
     };
 
     explicit Timer(int fd);
