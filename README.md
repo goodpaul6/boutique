@@ -24,10 +24,11 @@ SET key value
 - [ ] Separate server from database so that the latter can be embedded in-process
 - [ ] Gracefully handle non-graceful disconnects from the client
 - [ ] Create a new exception type SocketError
-- [ ] Create a "smart" client which allows for higher performance through eventual 
-      consistency by having updates to recently accessed keys be streamed back 
+- [ ] Create a "smart" client which allows for higher performance through eventual
+      consistency by having updates to recently accessed keys be streamed back
       from the server. This should be transparent to users, they just allow eventual
       consistency.
 - [ ] Smart client which streams updates back to the server in a separate thread
       so there's no write overhead
 - [ ] Switch to using epoll instead of select on Linux
+- [ ] Use std:: prefix everywhere for cstdint types
