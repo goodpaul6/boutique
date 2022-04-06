@@ -12,3 +12,4 @@ Release/*
 build 
 boutique
 CMakeLists.txt.user
+.vscode
