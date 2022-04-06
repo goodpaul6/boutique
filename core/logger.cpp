@@ -28,7 +28,7 @@ void Logger::log(std::string_view file, int line, Level level, std::string_view 
         return;
     }
 
-    if (level_value < static_cast<uint8_t>(Level::Error) && m_mask != 0 && (flags & m_mask) == 0) {
+    if (level_value < static_cast<uint8_t>(Level::ERROR) && m_mask != 0 && (flags & m_mask) == 0) {
         return;
     }
 
@@ -43,16 +43,16 @@ void Logger::log(std::string_view file, int line, Level level, std::string_view 
     std::clog << '[' << buf << "] ";
 
     switch (level) {
-        case Level::Debug:
+        case Level::DEBUG:
             std::clog << "DEBUG ";
             break;
-        case Level::Info:
+        case Level::INFO:
             std::clog << "INFO ";
             break;
-        case Level::Warning:
+        case Level::WARNING:
             std::clog << "WARNING ";
             break;
-        case Level::Error:
+        case Level::ERROR:
             std::clog << "ERROR ";
             break;
     }
