@@ -11,6 +11,8 @@ namespace boutique {
 
 enum class ReadResult { SUCCESS, INCOMPLETE, INVALID };
 
+// TODO This function actually mutates the buffer passed in if the read is complete.
+// That's a little confusing because the buffer is called a ConstBuffer.
 [[nodiscard]] ReadResult read(ConstBuffer& b, Command& cmd);
 [[nodiscard]] ReadResult read(ConstBuffer& b, Response& res);
 
