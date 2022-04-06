@@ -10,7 +10,7 @@
 using namespace boutique;
 
 int main(int argc, char** argv) {
-    auto client = Socket::connect(argv[1], static_cast<unsigned short>(std::stoi(argv[2])));
+    Socket client{Socket::ConnectParams{argv[1], static_cast<unsigned short>(std::stoi(argv[2]))}};
 
     client.set_non_blocking(false);
 

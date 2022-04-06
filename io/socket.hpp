@@ -5,7 +5,19 @@
 namespace boutique {
 
 struct Socket {
+    struct ListenParams {
+        unsigned short port = 6969;
+        int backlog = 4;
+    };
+
+    struct ConnectParams {
+        const char* host = nullptr;
+        unsigned short port = 6969;
+    };
+
     explicit Socket(int fd);
+    explicit Socket(const ListenParams& params);
+    explicit Socket(const ConnectParams& params);
 
     Socket(Socket&& other);
     Socket& operator=(Socket&& other);
@@ -14,9 +26,6 @@ struct Socket {
     Socket& operator=(const Socket& other) = delete;
 
     ~Socket();
-
-    static Socket listen(unsigned short port, int backlog = 4);
-    static Socket connect(const char* host, unsigned short port);
 
     std::optional<Socket> accept();
 
