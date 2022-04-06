@@ -51,27 +51,28 @@ void ClientHandler::recv_handler(int len) {
             break;
         }
 
-        auto buf = std::make_shared<std::vector<char>>();
+        const auto write_and_send = [&](const auto& res) {
+            auto buf = std::make_shared<std::vector<char>>();
 
-        auto buf_writer = [&](size_t len) {
-            buf->resize(buf->size() + len);
-            auto* ptr = buf->data() + buf->size() - len;
+            auto buf_writer = [&](size_t len) {
+                buf->resize(buf->size() + len);
+                auto* ptr = buf->data() + buf->size() - len;
 
-            return ptr;
-        };
+                return ptr;
+            };
 
-        if (rc_res == ReadResult::INVALID) {
-            write(buf_writer, InvalidCommandResponse{});
+            write(buf_writer, res);
 
             auto* buf_data = buf->data();
             auto buf_size = buf->size();
 
             // Move the buffer into the function so it is kept alive until sent
             async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
-                           [buf = std::move(buf)](int res) {});
+                           [buf = std::move(buf)](int) {});
+        };
 
-            m_stream.consume(cmd_buf.data - m_stream.data());
-
+        if (rc_res == ReadResult::INVALID) {
+            write_and_send(InvalidCommandResponse{});
             break;
         }
 
@@ -85,32 +86,14 @@ void ClientHandler::recv_handler(int len) {
                     auto value = m_server->dict().get(std::string{v.key});
 
                     if (value) {
-                        write(buf_writer, FoundResponse{*value});
-
-                        auto* buf_data = buf->data();
-                        auto buf_size = buf->size();
-
-                        async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
-                                       [buf = std::move(buf)](int res) {});
+                        write_and_send(FoundResponse{*value});
                     } else {
-                        write(buf_writer, NotFoundResponse{});
-
-                        auto* buf_data = buf->data();
-                        auto buf_size = buf->size();
-
-                        async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
-                                       [buf = std::move(buf)](int res) {});
+                        write_and_send(NotFoundResponse{});
                     }
                 } else if constexpr (std::is_same_v<T, SetCommand>) {
                     m_server->dict().set(std::string{v.key}, std::string{v.value});
 
-                    write(buf_writer, SuccessResponse{});
-
-                    auto* buf_data = buf->data();
-                    auto buf_size = buf->size();
-
-                    async_send_all(m_server->io_context(), m_socket, buf_data, buf_size,
-                                   [buf = std::move(buf)](int res) {});
+                    write_and_send(SuccessResponse{});
                 }
             },
             cmd);
