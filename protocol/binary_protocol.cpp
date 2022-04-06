@@ -6,6 +6,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "core/overloaded_visitor.hpp"
 #include "core/serialize.hpp"
 #include "core/type_index.hpp"
 
@@ -94,18 +95,14 @@ void write(WriteFn write_fn, const Command& cmd) {
 
     write(write_fn, static_cast<uint8_t>(cmd.index()));
 
-    std::visit(
-        [&](auto&& v) {
-            using T = std::decay_t<decltype(v)>;
-
-            if constexpr (std::is_same_v<T, GetCommand>) {
-                write(write_fn, LengthPrefixedString{v.key});
-            } else if constexpr (std::is_same_v<T, SetCommand>) {
-                write(write_fn, LengthPrefixedString{v.key});
-                write(write_fn, LengthPrefixedString{v.value});
-            }
-        },
-        cmd);
+    std::visit(OverloadedVisitor{
+                   [&](const GetCommand& cmd) { write(write_fn, LengthPrefixedString{cmd.key}); },
+                   [&](const SetCommand& cmd) {
+                       write(write_fn, LengthPrefixedString{cmd.key});
+                       write(write_fn, LengthPrefixedString{cmd.value});
+                   },
+                   [](auto) {}},
+               cmd);
 }
 
 void write(WriteFn write_fn, const Response& res) {
@@ -113,15 +110,11 @@ void write(WriteFn write_fn, const Response& res) {
 
     write(write_fn, static_cast<uint8_t>(res.index()));
 
-    std::visit(
-        [&](auto&& v) {
-            using T = std::decay_t<decltype(v)>;
-
-            if constexpr (std::is_same_v<T, FoundResponse>) {
-                write(write_fn, LengthPrefixedString{v.value});
-            }
-        },
-        res);
+    std::visit(OverloadedVisitor{[&](const FoundResponse& res) {
+                                     write(write_fn, LengthPrefixedString{res.value});
+                                 },
+                                 [](auto) {}},
+               res);
 }
 
 }  // namespace boutique
