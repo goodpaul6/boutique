@@ -21,9 +21,11 @@ SET key value
 - [x] Binary protocol
 - [x] Add support for timers to io (see timerfd on Linux)
 - [x] Add tests for async_send and async_recv
+- [ ] Allow defining schemas for key prefixes
+- [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io
 - [ ] Add async_listen to io
-- [ ] Allow defining schemas for key prefixes
+- [ ] Add tests for StreamBuf
 - [ ] Key expiry using async timers
 - [ ] Separate server from database so that the latter can be embedded in-process
 - [ ] Gracefully handle non-graceful disconnects from the client
