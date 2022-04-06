@@ -1,6 +1,9 @@
 #include <cassert>
+#include <iostream>
+#include <optional>
 
 #include "context.hpp"
+#include "socket.hpp"
 #include "timer.hpp"
 
 int main(int argc, char** argv) {
@@ -24,6 +27,21 @@ int main(int argc, char** argv) {
     ctx.run();
 
     assert(expire_count == 1);
+
+    Socket server_sock{Socket::ListenParams{42690, 1}};
+
+    std::optional<Socket> accepted_sock;
+
+    ctx.async_accept(server_sock, [&](auto client_sock) {
+        accepted_sock = std::move(client_sock);
+        ctx.stop();
+    });
+
+    Socket client_sock{Socket::ConnectParams{"localhost", 42690}};
+
+    ctx.run();
+
+    assert(accepted_sock);
 
     return 0;
 }
