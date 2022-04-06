@@ -54,5 +54,23 @@ int main(int argc, char** argv) {
         assert(std::get<SetCommand>(cmd).value == set_cmd.value);
     });
 
+    FoundResponse found_res;
+
+    found_res.value = "hello";
+
+    NotFoundResponse not_found_res;
+    SuccessResponse success_res;
+
+    write_read_check<Response>(found_res, [&](auto& res) {
+        assert(std::holds_alternative<FoundResponse>(res));
+        assert(std::get<FoundResponse>(res).value == found_res.value);
+    });
+
+    write_read_check<Response>(
+        not_found_res, [&](auto& res) { assert(std::holds_alternative<NotFoundResponse>(res)); });
+
+    write_read_check<Response>(
+        success_res, [&](auto& res) { assert(std::holds_alternative<SuccessResponse>(res)); });
+
     return 0;
 }
