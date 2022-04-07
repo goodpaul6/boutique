@@ -8,6 +8,9 @@ namespace boutique {
 struct Schema;
 
 struct Collection {
+    // TODO Make this a open-addressed hash table based on a 'key' field that is
+    // received as an argument when creating the collection.
+
     Collection(const Schema& schema);
 
     void put(const void* elem_data);
