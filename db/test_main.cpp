@@ -19,8 +19,8 @@ int main(int argc, char** argv) {
     Collection coord_coll{coord_schema};
 
     struct Coord {
-        double lat;
-        double lng;
+        double lat = 0;
+        double lng = 0;
     };
 
     Coord c{10, 20};
