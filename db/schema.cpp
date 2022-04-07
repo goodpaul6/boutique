@@ -9,6 +9,8 @@ namespace boutique {
 
 std::size_t alignment(const FieldType& type) {
     return std::visit(OverloadedVisitor{
+                          [](BoolType) { return alignof(bool); },
+
                           [](UInt8Type) { return alignof(std::uint8_t); },
                           [](UInt16Type) { return alignof(std::uint16_t); },
                           [](UInt32Type) { return alignof(std::uint32_t); },
@@ -39,6 +41,8 @@ std::size_t alignment(const Schema& schema) {
 
 std::size_t size(const FieldType& type) {
     return std::visit(OverloadedVisitor{
+                          [](BoolType) { return sizeof(bool); },
+
                           [](UInt8Type) { return sizeof(std::uint8_t); },
                           [](UInt16Type) { return sizeof(std::uint16_t); },
                           [](UInt32Type) { return sizeof(std::uint32_t); },

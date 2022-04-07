@@ -7,6 +7,8 @@
 
 namespace boutique {
 
+struct BoolType {};
+
 struct UInt8Type {};
 struct UInt16Type {};
 struct UInt32Type {};
@@ -28,8 +30,9 @@ struct StringHeader {
     std::uint32_t len = 0;
 };
 
-using FieldType = std::variant<UInt8Type, UInt16Type, UInt32Type, UInt64Type, Int8Type, Int16Type,
-                               Int32Type, Int64Type, Float32Type, Float64Type, StringType>;
+using FieldType =
+    std::variant<BoolType, UInt8Type, UInt16Type, UInt32Type, UInt64Type, Int8Type, Int16Type,
+                 Int32Type, Int64Type, Float32Type, Float64Type, StringType>;
 
 struct Field {
     std::string name;
