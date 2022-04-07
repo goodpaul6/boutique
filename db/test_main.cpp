@@ -54,12 +54,12 @@ int main(int argc, char** argv) {
 
     assert(coord_coll.count() == 0);
 
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 1'000'000; ++i) {
         c.lat = static_cast<double>(i);
         coord_coll.put(&c);
     }
 
-    assert(coord_coll.count() == 1000);
+    assert(coord_coll.count() == 1'000'000);
 
     return 0;
 }
