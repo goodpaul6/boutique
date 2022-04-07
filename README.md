@@ -56,6 +56,7 @@ SET key value
 - [x] Add support for timers to io (see timerfd on Linux)
 - [x] Add tests for async_send and async_recv
 - [ ] Allow defining schemas for key prefixes
+- [ ] Add support for nested schemas
 - [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io
 - [ ] Add async_listen to io
