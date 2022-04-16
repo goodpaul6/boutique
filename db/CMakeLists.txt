@@ -1,6 +1,7 @@
 set(SOURCES
-    collection.cpp
-    schema.cpp)
+    storage.cpp
+    schema.cpp
+    collection.cpp)
 
 set(TEST_SOURCES
     test_main.cpp)

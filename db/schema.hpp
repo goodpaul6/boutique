@@ -41,6 +41,7 @@ struct Field {
 
 struct Schema {
     std::vector<Field> fields;
+    std::uint32_t key_field_index = 0;
 };
 
 std::size_t alignment(const FieldType& type);
@@ -48,5 +49,7 @@ std::size_t alignment(const Schema& schema);
 
 std::size_t size(const FieldType& type);
 std::size_t size(const Schema& schema);
+
+std::size_t offset(const Schema& schema, std::uint32_t field_index);
 
 }  // namespace boutique

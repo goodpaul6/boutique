@@ -62,20 +62,33 @@ std::size_t size(const FieldType& type) {
 }
 
 std::size_t size(const Schema& schema) {
-    std::size_t total_size = 0;
+    return offset(schema, schema.fields.size() - 1) + size(schema.fields.back().type);
+}
 
-    for (const auto& field : schema.fields) {
+std::size_t offset(const Schema& schema, std::uint32_t field_index) {
+    assert(!schema.fields.empty());
+    assert(field_index < schema.fields.size());
+
+    std::size_t offset = 0;
+
+    for (std::uint32_t i = 0; i <= field_index; ++i) {
+        const auto& field = schema.fields[i];
+
         // Pad such that the field is appropriately aligned
         const auto a = alignment(field.type);
 
         // Align to the field type's requirement
-        total_size += (total_size % a);
-        total_size &= ~(a - 1);
+        offset += (offset % a);
+        offset &= ~(a - 1);
 
-        total_size += size(field.type);
+        if (i == field_index) {
+            break;
+        }
+
+        offset += size(field.type);
     }
 
-    return total_size;
+    return offset;
 }
 
 }  // namespace boutique

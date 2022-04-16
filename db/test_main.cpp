@@ -4,6 +4,7 @@
 
 #include "collection.hpp"
 #include "schema.hpp"
+#include "storage.hpp"
 
 int main(int argc, char** argv) {
     using namespace boutique;
@@ -12,11 +13,11 @@ int main(int argc, char** argv) {
 
     assert(size(coord_schema) == size(Float64Type{}) * 2);
 
-    Schema user_schema{{{"name", StringType{3}}, {"balance", Int64Type{}}}};
+    Schema user_schema{{{"id", UInt64Type{}}, {"name", StringType{3}}, {"balance", Int64Type{}}}};
 
-    assert(size(user_schema) == size(Int64Type{}) * 2);
+    assert(size(user_schema) == size(Int64Type{}) * 3);
 
-    Collection coord_coll{coord_schema};
+    Storage coord_coll{size(coord_schema)};
 
     struct Coord {
         double lat = 0;
@@ -60,6 +61,33 @@ int main(int argc, char** argv) {
     }
 
     assert(coord_coll.count() == 1'000'000);
+
+    Collection user_coll{user_schema};
+
+    struct User {
+        std::uint64_t id;
+        std::uint32_t name_len;
+        char name[3];
+        std::int64_t balance;
+    };
+
+    std::uint64_t id = 1;
+
+    User user{id, 3, {'b', 'o', 'b'}, 1000};
+
+    user_coll.put(&user);
+
+    auto* found = user_coll.find(id);
+
+    assert(found);
+
+    User read_user;
+    std::memcpy(&read_user, found, sizeof(User));
+
+    assert(read_user.id == user.id);
+    assert(read_user.name_len == user.name_len);
+    assert(std::memcmp(read_user.name, user.name, sizeof(read_user.name)) == 0);
+    assert(read_user.balance == user.balance);
 
     return 0;
 }
