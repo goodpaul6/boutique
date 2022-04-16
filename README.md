@@ -55,7 +55,8 @@ SET key value
 - [x] Binary protocol
 - [x] Add support for timers to io (see timerfd on Linux)
 - [x] Add tests for async_send and async_recv
-- [ ] Allow defining schemas for key prefixes
+- [x] Add storage object for storing documents
+- [x] Add collections which can store documents and index them by key
 - [ ] Add support for nested schemas
 - [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io
