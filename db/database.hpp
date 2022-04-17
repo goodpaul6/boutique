@@ -11,9 +11,10 @@ namespace boutique {
 
 struct Database {
     const Schema& register_schema(std::string name, Schema schema);
-    Collection& create_collection(std::string name, const Schema& schema);
+    Collection& create_collection(std::string name, Schema schema);
 
-    Collection& collection(const std::string& name);
+    const Schema* schema(const std::string& name);
+    Collection* collection(const std::string& name);
 
     // TODO Add higher-level functions that will find a document given a query,
     // maintain indexes, modify schemas, etc

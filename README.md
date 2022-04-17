@@ -57,6 +57,7 @@ SET key value
 - [x] Add tests for async_send and async_recv
 - [x] Add storage object for storing documents
 - [x] Add collections which can store documents and index them by key
+- [x] Create database object for housing schemas and collections
 - [ ] Add support for nested schemas
 - [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io

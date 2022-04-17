@@ -1,7 +1,8 @@
 set(SOURCES
     storage.cpp
     schema.cpp
-    collection.cpp)
+    collection.cpp
+    database.cpp)
 
 set(TEST_SOURCES
     test_main.cpp)

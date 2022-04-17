@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "collection.hpp"
+#include "database.hpp"
 #include "schema.hpp"
 #include "storage.hpp"
 
@@ -88,6 +89,14 @@ int main(int argc, char** argv) {
     assert(read_user.name_len == user.name_len);
     assert(std::memcmp(read_user.name, user.name, sizeof(read_user.name)) == 0);
     assert(read_user.balance == user.balance);
+
+    Database db;
+
+    const auto& db_user_schema = db.register_schema("User", user_schema);
+    auto& db_user_coll = db.create_collection("users", db_user_schema);
+
+    assert(db.schema("User") == &db_user_schema);
+    assert(db.collection("users") == &db_user_coll);
 
     return 0;
 }
