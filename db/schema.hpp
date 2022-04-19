@@ -5,6 +5,8 @@
 #include <variant>
 #include <vector>
 
+#include "core/const_buffer.hpp"
+
 namespace boutique {
 
 struct BoolType {};
@@ -33,6 +35,64 @@ struct StringHeader {
 using FieldType =
     std::variant<BoolType, UInt8Type, UInt16Type, UInt32Type, UInt64Type, Int8Type, Int16Type,
                  Int32Type, Int64Type, Float32Type, Float64Type, StringType>;
+
+template <typename T>
+struct ImplType;
+
+template <>
+struct ImplType<BoolType> {
+    using Type = bool;
+};
+
+template <>
+struct ImplType<UInt8Type> {
+    using Type = std::uint8_t;
+};
+
+template <>
+struct ImplType<UInt16Type> {
+    using Type = std::uint16_t;
+};
+
+template <>
+struct ImplType<UInt32Type> {
+    using Type = std::uint32_t;
+};
+
+template <>
+struct ImplType<UInt64Type> {
+    using Type = std::uint64_t;
+};
+
+template <>
+struct ImplType<Int8Type> {
+    using Type = std::int8_t;
+};
+
+template <>
+struct ImplType<Int16Type> {
+    using Type = std::int16_t;
+};
+
+template <>
+struct ImplType<Int32Type> {
+    using Type = std::int32_t;
+};
+
+template <>
+struct ImplType<Int64Type> {
+    using Type = std::int64_t;
+};
+
+template <>
+struct ImplType<Float32Type> {
+    using Type = float;
+};
+
+template <>
+struct ImplType<Float64Type> {
+    using Type = double;
+};
 
 struct Field {
     std::string name;

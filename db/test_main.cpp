@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
 
     Schema user_schema{{{"id", UInt64Type{}}, {"name", StringType{3}}, {"balance", Int64Type{}}}};
 
+    user_schema.key_field_index = 1;
+
     assert(size(user_schema) == size(Int64Type{}) * 3);
 
     Storage coord_coll{size(coord_schema)};
@@ -78,7 +80,19 @@ int main(int argc, char** argv) {
 
     user_coll.put(&user);
 
-    auto* found = user_coll.find(id);
+    std::memcpy(user.name, "cat", 3);
+
+    user_coll.put(&user);
+
+    auto* found = user_coll.find(ConstBuffer{"bob"});
+
+    assert(found);
+
+    user_coll.remove(ConstBuffer{"bob"});
+
+    assert(user_coll.count() == 1);
+
+    found = user_coll.find(ConstBuffer{"cat"});
 
     assert(found);
 
