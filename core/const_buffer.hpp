@@ -18,6 +18,7 @@ struct ConstBuffer {
 
     void remove_prefix(size_t count);
 
+    // FIXME I don't like that we have this
     ConstBuffer& operator+=(size_t count);
 };
 
