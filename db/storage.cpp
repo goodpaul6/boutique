@@ -26,7 +26,7 @@ void* Storage::put(const void* elem_data) {
     std::memcpy(m_data.data() + m_doc_size * m_count, elem_data, m_doc_size);
     m_count += 1;
 
-    return m_data.data() + m_doc_size * m_count;
+    return m_data.data() + m_doc_size * (m_count - 1);
 }
 
 void Storage::remove(const void* elem_ptr) {

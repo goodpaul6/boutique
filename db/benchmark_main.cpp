@@ -7,7 +7,7 @@
 
 namespace {
 
-const int OP_COUNT = 10'000'000;
+const int OP_COUNT = 5'000'000;
 
 }
 

@@ -7,6 +7,13 @@
 #include "schema.hpp"
 #include "storage.hpp"
 
+struct User {
+    std::uint64_t id;
+    std::uint32_t name_len;
+    char name[3];
+    std::int64_t balance;
+};
+
 int main(int argc, char** argv) {
     using namespace boutique;
 
@@ -66,13 +73,6 @@ int main(int argc, char** argv) {
     assert(coord_coll.count() == 1'000'000);
 
     Collection user_coll{user_schema};
-
-    struct User {
-        std::uint64_t id;
-        std::uint32_t name_len;
-        char name[3];
-        std::int64_t balance;
-    };
 
     std::uint64_t id = 1;
 

@@ -9,6 +9,7 @@
 
 #include "core/const_buffer.hpp"
 #include "schema.hpp"
+#include "storage.hpp"
 
 namespace boutique {
 
@@ -31,19 +32,19 @@ private:
     // without the collection's knowledge.
     Schema m_schema;
 
-    // Cache the document size
-    std::size_t m_doc_size = 0;
+    // This stores all of the documents contiguously. This does not retain insertion order
+    // as removing swaps the last element in the storage with the removed element.
+    Storage m_storage;
 
-    // The internal data structure is an open-addressed hash table.
-    // Keys are embedded within the documents and we have empty/tombstone
-    // representations for all the keys (0x000000...) so you can't
-    // have zeros as a key boohoo or 0xFFFFF.... :'(
-    std::vector<char> m_data;
-    std::size_t m_bucket_count = 0;
-    std::size_t m_count = 0;
+    struct KeyValue {
+        std::size_t key_hash;
+        std::size_t value_index;
+    };
 
-    char* find_internal(ConstBuffer key, std::size_t key_hash);
-    char* put_internal(const void* elem_data, std::vector<char>& dest, std::size_t bucket_count);
+    std::vector<KeyValue> m_buckets;
+
+    KeyValue* find_internal(ConstBuffer key, std::size_t key_hash);
+    KeyValue* put_internal(std::vector<KeyValue>& dest, ConstBuffer key, std::size_t key_hash);
 };
 
 }  // namespace boutique
