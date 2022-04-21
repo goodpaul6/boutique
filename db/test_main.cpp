@@ -76,33 +76,62 @@ int main(int argc, char** argv) {
 
     std::uint64_t id = 1;
 
-    User user{id, 3, {'b', 'o', 'b'}, 1000};
+    User user;
 
-    user_coll.put(&user);
+    for (int i = 1; i <= 100; ++i) {
+        auto s = std::to_string(i);
 
-    std::memcpy(user.name, "cat", 3);
+        user.id = i;
 
-    user_coll.put(&user);
+        user.name_len = s.size();
+        std::memcpy(user.name, s.c_str(), s.size());
 
-    auto* found = user_coll.find(ConstBuffer{"bob"});
+        user.balance = i;
+
+        user_coll.put(&user);
+    }
+
+    auto* found = user_coll.find(ConstBuffer{"1"});
 
     assert(found);
 
-    user_coll.remove(ConstBuffer{"bob"});
+    for (int i = 1; i <= 50; ++i) {
+        auto s = std::to_string(i);
+        user_coll.remove(ConstBuffer{s.data(), s.size()});
+    }
 
-    assert(user_coll.count() == 1);
+    assert(user_coll.count() == 50);
 
-    found = user_coll.find(ConstBuffer{"cat"});
+    found = user_coll.find(ConstBuffer{"2"});
+
+    assert(!found);
+
+    found = user_coll.find(ConstBuffer{"73"});
 
     assert(found);
 
     User read_user;
     std::memcpy(&read_user, found, sizeof(User));
 
-    assert(read_user.id == user.id);
-    assert(read_user.name_len == user.name_len);
-    assert(std::memcmp(read_user.name, user.name, sizeof(read_user.name)) == 0);
-    assert(read_user.balance == user.balance);
+    assert(read_user.id == 73);
+    assert(read_user.balance == 73);
+
+    for (int i = 1; i <= 50; ++i) {
+        auto s = std::to_string(i);
+
+        user.id = i;
+
+        user.name_len = s.size();
+        std::memcpy(user.name, s.c_str(), s.size());
+
+        user.balance = i;
+
+        user_coll.put(&user);
+    }
+
+    found = user_coll.find(ConstBuffer{"20"});
+
+    assert(found);
 
     Database db;
 

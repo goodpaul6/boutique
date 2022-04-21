@@ -35,9 +35,9 @@ private:
     std::size_t m_doc_size = 0;
 
     // The internal data structure is an open-addressed hash table.
-    // Keys are embedded within the documents and we have tombstone
+    // Keys are embedded within the documents and we have empty/tombstone
     // representations for all the keys (0x000000...) so you can't
-    // have zeros as a key boohoo.
+    // have zeros as a key boohoo or 0xFFFFF.... :'(
     std::vector<char> m_data;
     std::size_t m_bucket_count = 0;
     std::size_t m_count = 0;

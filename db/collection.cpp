@@ -55,9 +55,14 @@ boutique::ConstBuffer key_as_const_buffer(const boutique::Schema& schema, const 
     return field_as_const_buffer(field_type, key);
 }
 
-bool is_tombstone(boutique::ConstBuffer buf) {
+bool is_empty(boutique::ConstBuffer buf) {
     // TODO Could be optimized with memcmp with a precached buffer containing zeros and memcmp
     return std::all_of(buf.data, buf.data + buf.len, [](auto ch) { return ch == 0; });
+}
+
+bool is_tombstone(boutique::ConstBuffer buf) {
+    // TODO Could be optimized with memcmp with a precached buffer containing Fs and memcmp
+    return std::all_of(buf.data, buf.data + buf.len, [](auto ch) { return ch == 0xFF; });
 }
 
 }  // namespace
@@ -90,7 +95,7 @@ void* Collection::put(const void* data) {
                 auto* elem = m_data.data() + i * m_doc_size;
                 auto elem_key = key_as_const_buffer(m_schema, elem);
 
-                if (is_tombstone(elem_key)) {
+                if (is_empty(elem_key) || is_tombstone(elem_key)) {
                     continue;
                 }
 
@@ -124,7 +129,7 @@ char* Collection::put_internal(const void* elem_data, std::vector<char>& dest,
         auto* data = dest.data() + idx * m_doc_size;
         auto data_key = key_as_const_buffer(m_schema, data);
 
-        if (is_tombstone(data_key)) {
+        if (is_empty(data_key) || is_tombstone(data_key)) {
             std::memcpy(data, elem_data, m_doc_size);
             return data;
         }
@@ -151,7 +156,7 @@ void Collection::remove(ConstBuffer key) {
     auto* found_key = found + offset(m_schema, m_schema.key_field_index);
 
     // Memsetting to zero marks this spot as available.
-    std::memset(found_key, 0, key.len);
+    std::memset(found_key, 0xFF, key.len);
     m_count -= 1;
 }
 
@@ -177,7 +182,7 @@ char* Collection::find_internal(ConstBuffer key, std::size_t key_hash) {
         auto* data = m_data.data() + idx * m_doc_size;
         auto data_key = key_as_const_buffer(m_schema, data);
 
-        if (is_tombstone(data_key)) {
+        if (is_empty(data_key)) {
             return nullptr;
         }
 
