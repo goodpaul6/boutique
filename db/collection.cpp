@@ -87,8 +87,6 @@ void* Collection::put(const void* data) {
         }
 
         {
-            BOUTIQUE_DEBUG_TIME_TRACKER("Rehash");
-
             std::vector<char> new_data(new_bucket_count * m_doc_size);
 
             for (std::size_t i = 0; i < m_bucket_count; ++i) {
