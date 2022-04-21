@@ -4,8 +4,8 @@
 
 namespace boutique {
 
-TimeTracker::TimeTracker(const char* prefix)
-    : m_prefix{prefix}, m_start_time{std::chrono::high_resolution_clock::now()} {}
+TimeTracker::TimeTracker(std::string prefix)
+    : m_prefix{std::move(prefix)}, m_start_time{std::chrono::high_resolution_clock::now()} {}
 
 TimeTracker::~TimeTracker() {
     BOUTIQUE_LOG_INFO("{}: Elapsed time {}us", m_prefix,
