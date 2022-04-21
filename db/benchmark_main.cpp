@@ -7,7 +7,7 @@
 
 namespace {
 
-const int OP_COUNT = 1'000'000;
+const int OP_COUNT = 10'000'000;
 
 }
 
@@ -23,49 +23,35 @@ int main(int argc, char** argv) {
 
     Schema user_schema;
 
-    user_schema.fields = {{"name", StringType{sizeof(User::name)}}, {"balance", Int64Type{}}};
-    user_schema.key_field_index = 1;
+    user_schema.fields = {
+        {"name", StringType{sizeof(User::name)}}, {"id", UInt64Type{}}, {"balance", Int64Type{}}};
+    user_schema.key_field_index = 0;
 
     User user;
 
     user.name_len = 3;
     user.name = {'b', 'o', 'b'};
-    user.id = 0;
     user.balance = 10;
 
     Database db;
 
-    // Storage
-    Storage storage{size(user_schema)};
+    // Unordered map
+    std::unordered_map<std::string, User> map;
 
-    std::cout << "Insert " << OP_COUNT << " documents into bt storage.\n";
+    std::cout << "Insert " << OP_COUNT << " documents into unordered_map.\n";
 
     auto prev_time = std::chrono::high_resolution_clock::now();
 
     for (int i = 1; i <= OP_COUNT; ++i) {
-        user.id = i;
-        storage.put(&user);
+        auto s = std::to_string(i);
+
+        user.name_len = s.size();
+        std::memcpy(user.name.data(), s.data(), s.size());
+
+        map.insert_or_assign(user.name.data(), user);
     }
 
     auto new_time = std::chrono::high_resolution_clock::now();
-
-    std::cout << "Took "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(new_time - prev_time).count()
-              << "ms.\n";
-
-    // Unordered map
-    std::unordered_map<std::uint64_t, User> map;
-
-    std::cout << "Insert " << OP_COUNT << " documents into unordered_map.\n";
-
-    prev_time = std::chrono::high_resolution_clock::now();
-
-    for (int i = 1; i <= OP_COUNT; ++i) {
-        user.id = i;
-        map.insert_or_assign(user.id, user);
-    }
-
-    new_time = std::chrono::high_resolution_clock::now();
 
     std::cout << "Took "
               << std::chrono::duration_cast<std::chrono::milliseconds>(new_time - prev_time).count()
@@ -76,7 +62,9 @@ int main(int argc, char** argv) {
     prev_time = std::chrono::high_resolution_clock::now();
 
     for (int i = OP_COUNT; i >= 1; --i) {
-        volatile auto found = map.find(i);
+        auto s = std::to_string(i);
+
+        volatile auto found = map.find(s);
     }
 
     new_time = std::chrono::high_resolution_clock::now();
@@ -93,7 +81,11 @@ int main(int argc, char** argv) {
     prev_time = std::chrono::high_resolution_clock::now();
 
     for (int i = 1; i <= OP_COUNT; ++i) {
-        user.id = i;
+        auto s = std::to_string(i);
+
+        user.name_len = s.size();
+        std::memcpy(user.name.data(), s.data(), s.size());
+
         coll.put(&user);
     }
 
@@ -108,16 +100,16 @@ int main(int argc, char** argv) {
     prev_time = std::chrono::high_resolution_clock::now();
 
     for (int i = OP_COUNT; i >= 1; --i) {
-        std::uint64_t id = i;
-        volatile auto* found = static_cast<User*>(
-            coll.find(ConstBuffer{reinterpret_cast<const char*>(&id), sizeof(id)}));
+        auto s = std::to_string(i);
+
+        volatile auto* found = static_cast<User*>(coll.find(ConstBuffer{s.data(), s.size()}));
 
         if (!found) {
             std::cerr << "Failed to find!\n";
             return 1;
         }
 
-        if (reinterpret_cast<volatile User*>(found)->id != id) {
+        if (reinterpret_cast<volatile User*>(found)->name_len != s.size()) {
             std::cerr << "Bad ID!\n";
             return 1;
         }
