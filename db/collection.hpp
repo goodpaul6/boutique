@@ -32,6 +32,14 @@ private:
     // without the collection's knowledge.
     Schema m_schema;
 
+    // We cache this because computing the offset can be a bottleneck
+    std::size_t m_key_offset = 0;
+
+    ConstBuffer (*m_key_buffer_fn)(const void* data, std::size_t key_offset);
+
+    // We cache this because it never changes with a constant schema
+    std::size_t (*m_hash_fn)(ConstBuffer);
+
     // This stores all of the documents contiguously. This does not retain insertion order
     // as removing swaps the last element in the storage with the removed element.
     Storage m_storage;

@@ -59,6 +59,7 @@ SET key value
 - [x] Add collections which can store documents and index them by key
 - [x] Create database object for housing schemas and collections
 - [x] Create open-addressed hash table as storage for collection
+- [x] Profile and optimize collection data structure
 - [ ] Add support for nested schemas
 - [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io

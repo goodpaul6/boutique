@@ -10,58 +10,46 @@ namespace {
 
 const std::size_t TOMBSTONE_KEY_HASH = ~0;
 
-std::size_t hash(const boutique::FieldType& type, boutique::ConstBuffer buf) {
-    using namespace boutique;
-
-    return std::visit(
-        OverloadedVisitor{[&](StringType) {
-                              return std::hash<std::string_view>{}({buf.data, buf.len});
-                          },
-                          [&](auto&& v) {
-                              using T = typename ImplType<std::decay_t<decltype(v)>>::Type;
-
-                              assert(buf.len == sizeof(T));
-
-                              return std::hash<T>{}(*reinterpret_cast<const T*>(buf.data));
-                          }},
-        type);
-}
-
-boutique::ConstBuffer field_as_const_buffer(const boutique::FieldType& type,
-                                            const void* field_ptr) {
-    using namespace boutique;
-
-    return std::visit(OverloadedVisitor{
-                          [&](auto&& v) -> ConstBuffer {
-                              using T = typename ImplType<std::decay_t<decltype(v)>>::Type;
-
-                              return {reinterpret_cast<const char*>(field_ptr), sizeof(T)};
-                          },
-                          [&](StringType) -> ConstBuffer {
-                              const auto* str_header = static_cast<const StringHeader*>(field_ptr);
-
-                              return {
-                                  reinterpret_cast<const char*>(str_header) + sizeof(*str_header),
-                                  str_header->len};
-                          },
-                      },
-                      type);
-}
-
-boutique::ConstBuffer key_as_const_buffer(const boutique::Schema& schema, const void* data) {
-    using namespace boutique;
-
-    const auto& field_type = schema.fields[schema.key_field_index].type;
-    const auto* key = reinterpret_cast<const char*>(data) + offset(schema, schema.key_field_index);
-
-    return field_as_const_buffer(field_type, key);
-}
-
 }  // namespace
 
 namespace boutique {
 
-Collection::Collection(Schema schema) : m_schema{std::move(schema)}, m_storage{size(m_schema)} {}
+Collection::Collection(Schema schema)
+    : m_schema{std::move(schema)},
+      m_storage{size(m_schema)},
+      m_key_offset{offset(m_schema, m_schema.key_field_index)} {
+    std::visit(
+        OverloadedVisitor{
+            [&](StringType) {
+                m_key_buffer_fn = [](const void* data, std::size_t key_offset) -> ConstBuffer {
+                    const auto* key = reinterpret_cast<const char*>(data) + key_offset;
+                    const auto* str_header = reinterpret_cast<const StringHeader*>(key);
+
+                    return {reinterpret_cast<const char*>(str_header) + sizeof(*str_header),
+                            str_header->len};
+                };
+
+                m_hash_fn = [](ConstBuffer buf) {
+                    return std::hash<std::string_view>{}({buf.data, buf.len});
+                };
+            },
+            [&](auto&& v) {
+                using T = typename ImplType<std::decay_t<decltype(v)>>::Type;
+
+                m_key_buffer_fn = [](const void* data, std::size_t key_offset) -> ConstBuffer {
+                    const auto* key = reinterpret_cast<const char*>(data) + key_offset;
+
+                    return {reinterpret_cast<const char*>(key), sizeof(T)};
+                };
+
+                m_hash_fn = [](ConstBuffer buf) {
+                    assert(buf.len == sizeof(T));
+
+                    return std::hash<T>{}(*reinterpret_cast<const T*>(buf.data));
+                };
+            }},
+        m_schema.fields[m_schema.key_field_index].type);
+}
 
 void* Collection::put(const void* data) {
     if (m_storage.count() + 1 >= static_cast<std::size_t>(m_buckets.size() / 1.4)) {
@@ -76,9 +64,9 @@ void* Collection::put(const void* data) {
 
             for (std::size_t i = 0; i < m_storage.count(); ++i) {
                 auto* elem = m_storage[i];
-                auto elem_key = key_as_const_buffer(m_schema, elem);
+                auto elem_key = m_key_buffer_fn(elem, m_key_offset);
 
-                auto elem_key_h = hash(m_schema.fields[m_schema.key_field_index].type, elem_key);
+                auto elem_key_h = m_hash_fn(elem_key);
 
                 // TODO We can optimize the put_internal here by having it skip checking for
                 // duplicates, since there will never be duplicates
@@ -95,8 +83,8 @@ void* Collection::put(const void* data) {
         }
     }
 
-    auto data_key = key_as_const_buffer(m_schema, data);
-    auto data_key_h = hash(m_schema.fields[m_schema.key_field_index].type, data_key);
+    auto data_key = m_key_buffer_fn(data, m_key_offset);
+    auto data_key_h = m_hash_fn(data_key);
 
     if (auto* res = put_internal(m_buckets, data_key, data_key_h)) {
         if (res->value_index == m_storage.count()) {
@@ -114,7 +102,7 @@ void* Collection::put(const void* data) {
 }
 
 void Collection::remove(ConstBuffer key) {
-    auto h = hash(m_schema.fields[m_schema.key_field_index].type, key);
+    auto h = m_hash_fn(key);
 
     auto* found = find_internal(key, h);
 
@@ -127,10 +115,9 @@ void Collection::remove(ConstBuffer key) {
         // index
 
         auto* last_elem_data = m_storage[m_storage.count() - 1];
-        auto last_elem_data_key = key_as_const_buffer(m_schema, last_elem_data);
+        auto last_elem_data_key = m_key_buffer_fn(last_elem_data, m_key_offset);
 
-        auto last_elem_data_key_hash =
-            hash(m_schema.fields[m_schema.key_field_index].type, last_elem_data_key);
+        auto last_elem_data_key_hash = m_hash_fn(last_elem_data_key);
 
         auto* last_elem_found = find_internal(last_elem_data_key, last_elem_data_key_hash);
 
@@ -147,7 +134,7 @@ void Collection::remove(ConstBuffer key) {
 // If the key type is a string, we convert the ConstBuffer to a string_view
 // and perform the lookup using that.
 void* Collection::find(ConstBuffer key) {
-    auto h = hash(m_schema.fields[m_schema.key_field_index].type, key);
+    auto h = m_hash_fn(key);
 
     auto* found = find_internal(key, h);
 
@@ -180,7 +167,7 @@ Collection::KeyValue* Collection::put_internal(std::vector<KeyValue>& dest, Cons
         // If it matches a previously existing element, just return the existing bucket
         if (bucket.key_hash == key_hash) {
             auto* data = m_storage[bucket.value_index];
-            auto data_key = key_as_const_buffer(m_schema, data);
+            auto data_key = m_key_buffer_fn(data, m_key_offset);
 
             if (data_key.len == key.len && std::memcmp(data_key.data, key.data, key.len) == 0) {
                 return &bucket;
@@ -210,7 +197,7 @@ Collection::KeyValue* Collection::find_internal(ConstBuffer key, std::size_t key
 
         if (m_buckets[idx].key_hash == key_hash) {
             auto* data = m_storage[bucket.value_index];
-            auto data_key = key_as_const_buffer(m_schema, data);
+            auto data_key = m_key_buffer_fn(data, m_key_offset);
 
             if (key.len == data_key.len && std::memcmp(data_key.data, key.data, key.len) == 0) {
                 return &bucket;
