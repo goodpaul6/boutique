@@ -38,20 +38,18 @@ int main(int argc, char** argv) {
 
     get_cmd.key = ConstBuffer{"hello"};
 
-    SetCommand set_cmd;
+    PutCommand put_cmd;
 
-    set_cmd.key = ConstBuffer{"hello"};
-    set_cmd.value = ConstBuffer{"hello"};
+    put_cmd.value = ConstBuffer{"hello"};
 
     write_read_check<Command>(get_cmd, [&](auto& cmd) {
         assert(std::holds_alternative<GetCommand>(cmd));
         assert(std::get<GetCommand>(cmd).key == get_cmd.key);
     });
 
-    write_read_check<Command>(set_cmd, [&](auto& cmd) {
-        assert(std::holds_alternative<SetCommand>(cmd));
-        assert(std::get<SetCommand>(cmd).key == set_cmd.key);
-        assert(std::get<SetCommand>(cmd).value == set_cmd.value);
+    write_read_check<Command>(put_cmd, [&](auto& cmd) {
+        assert(std::holds_alternative<PutCommand>(cmd));
+        assert(std::get<PutCommand>(cmd).value == put_cmd.value);
     });
 
     FoundResponse found_res;

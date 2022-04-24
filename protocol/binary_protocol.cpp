@@ -137,16 +137,15 @@ ReadResult read(ConstBuffer& cursor, Command& cmd) {
             cmd = GetCommand{coll_name->s, ConstBuffer{key->s}};
         } break;
 
-        case type_index_v<SetCommand, Command>: {
+        case type_index_v<PutCommand, Command>: {
             auto coll_name = read<LengthPrefixedString>(c);
-            auto key = read<LengthPrefixedString>(c);
-            auto value = key ? read<LengthPrefixedString>(c) : std::nullopt;
+            auto value = read<LengthPrefixedString>(c);
 
-            if (!coll_name || !key || !value) {
+            if (!coll_name || !value) {
                 return ReadResult::INCOMPLETE;
             }
 
-            cmd = SetCommand{coll_name->s, ConstBuffer{key->s}, ConstBuffer{value->s}};
+            cmd = PutCommand{coll_name->s, ConstBuffer{value->s}};
         } break;
 
         default:
@@ -224,9 +223,8 @@ void write(WriteFn write_fn, const Command& cmd) {
                        write(write_fn, LengthPrefixedString{cmd.coll_name});
                        write(write_fn, LengthPrefixedString{{cmd.key.data, cmd.key.len}});
                    },
-                   [&](const SetCommand& cmd) {
+                   [&](const PutCommand& cmd) {
                        write(write_fn, LengthPrefixedString{cmd.coll_name});
-                       write(write_fn, LengthPrefixedString{{cmd.key.data, cmd.key.len}});
                        write(write_fn, LengthPrefixedString{{cmd.value.data, cmd.value.len}});
                    },
                    [](auto) {}},

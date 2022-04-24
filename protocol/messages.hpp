@@ -23,14 +23,13 @@ struct GetCommand {
     ConstBuffer key;
 };
 
-struct SetCommand {
+struct PutCommand {
     std::string_view coll_name;
-    ConstBuffer key;
     ConstBuffer value;
 };
 
 using Command = std::variant<std::monostate, RegisterSchemaCommand, CreateCollectionCommand,
-                             GetCommand, SetCommand>;
+                             GetCommand, PutCommand>;
 
 struct SuccessResponse {};
 struct InvalidCommandResponse {};
