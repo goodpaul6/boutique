@@ -151,7 +151,7 @@ std::size_t Collection::count() const { return m_storage.count(); }
 
 Collection::KeyValue* Collection::put_internal(std::vector<KeyValue>& dest, ConstBuffer key,
                                                std::size_t key_hash) {
-    auto idx = key_hash % dest.size();
+    auto idx = key_hash & (dest.size() - 1);
     auto orig_idx = idx;
 
     for (;;) {
@@ -175,7 +175,7 @@ Collection::KeyValue* Collection::put_internal(std::vector<KeyValue>& dest, Cons
         }
 
         idx += 1;
-        idx %= dest.size();
+        idx &= (dest.size() - 1);
 
         // We wrapped around, insert failed
         if (idx == orig_idx) {
@@ -185,7 +185,7 @@ Collection::KeyValue* Collection::put_internal(std::vector<KeyValue>& dest, Cons
 }
 
 Collection::KeyValue* Collection::find_internal(ConstBuffer key, std::size_t key_hash) {
-    auto idx = key_hash % m_buckets.size();
+    auto idx = key_hash & (m_buckets.size() - 1);
     auto orig_idx = idx;
 
     for (;;) {
@@ -205,7 +205,7 @@ Collection::KeyValue* Collection::find_internal(ConstBuffer key, std::size_t key
         }
 
         idx += 1;
-        idx %= m_buckets.size();
+        idx &= (m_buckets.size() - 1);
 
         if (idx == orig_idx) {
             return nullptr;
