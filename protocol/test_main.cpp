@@ -36,12 +36,12 @@ int main(int argc, char** argv) {
 
     GetCommand get_cmd;
 
-    get_cmd.key = "hello";
+    get_cmd.key = ConstBuffer{"hello"};
 
     SetCommand set_cmd;
 
-    set_cmd.key = "hello";
-    set_cmd.value = "hello";
+    set_cmd.key = ConstBuffer{"hello"};
+    set_cmd.value = ConstBuffer{"hello"};
 
     write_read_check<Command>(get_cmd, [&](auto& cmd) {
         assert(std::holds_alternative<GetCommand>(cmd));
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 
     FoundResponse found_res;
 
-    found_res.value = "hello";
+    found_res.value = ConstBuffer{"hello"};
 
     NotFoundResponse not_found_res;
     SuccessResponse success_res;

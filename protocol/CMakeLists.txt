@@ -6,7 +6,7 @@ set(TEST_SOURCES
 
 add_library(protocol ${SOURCES})
 
-target_link_libraries(protocol PRIVATE core)
+target_link_libraries(protocol PRIVATE core db)
 
 add_executable(test_protocol ${TEST_SOURCES})
 

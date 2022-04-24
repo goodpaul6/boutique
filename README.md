@@ -61,6 +61,7 @@ SET key value
 - [x] Create open-addressed hash table as storage for collection
 - [x] Profile and optimize collection data structure
 - [ ] Add support for nested schemas
+- [ ] Add support for arrays in schemas
 - [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io
 - [ ] Add async_listen to io
