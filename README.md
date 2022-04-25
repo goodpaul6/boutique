@@ -3,51 +3,78 @@
 A simple in-memory database. Stores collections of flat, pre-defined documents
 that can be queried and written to easily.
 
-## Current Goal Example
+## Example
 
-I want to be able to support the following use case.
+_Note that the current CLI is intentionally barebones, and the syntax is all subject to change._
 
-Let's say I want to cache some user information, like their last login time and
-last visited page.
+Let's say I want to cache some user information, like their last login time.
 
-```
-# Define the schema
-schema user {
-      id                 string64
-      last_login_time    uint64
-      last_visited_page  string64
-}
-
-# Create a collection 'users' that contains 'user' schema documents, with id as their top-level key
-coll users { user id }
-
-# Create/update a user, note how we don't have to set the ID field, it is populated from the key
-# parameter. These updates are atomic.
-set users:user_id_here {
-      last_login_time 1312309023
-      last_visited_page '/dashboard'
-}
-
-# Retrieve just the last login time of the user
-get users:user_id_here {
-      last_login_time
-}
-
-# Delete this user
-del users:user_id_here
-```
-
-## Commands
-
-Currently `boutique` server receives the following commands over TCP:
+First, we register the schema
 
 ```
-GET key
-=> Returns value stored at key
-
-SET key value
-=> Returns SUCCESS if successful
+> schema
+name > user
+field name or end > id
+field type > string
+string capacity > 64
+field name or end > last_login_time
+field type > uint64
+field name or end > end
+key field name > id
+Success.
 ```
+
+This registers a schema with the database called `user` which contains an `id`, a `string` at most 64 bytes long, and
+`last_login_time`, a `uint64` which stores milliseconds since unix epoch. I also specify that I want the `id` to be
+the key for the
+
+Next we create a collection which stores this schema
+
+```
+> collection
+name > users
+schema name > user
+Success.
+```
+
+This creates a collection called `users` which stores documents with the `user` schema.
+
+Next, we retrieve a copy of the schema from the database to facilitate insert and retrieve operations
+
+```
+> colschema
+name > users
+key id string64
+last_login_time uint64
+```
+
+Running the `colschema` commands retrieves the schema for a collection, pretty printing it in the process.
+Note that the `id` is the key.
+
+Let's put a document in the database
+
+```
+> put
+collection name > users
+value for string id > user_1
+value for uint64 last_login_time > 1650929781214
+Success.
+```
+
+We just inserted/updated a `user` document with id `user_1` into the `users` collection. The CLI helpfully outlines
+the fields we're providing values for.
+
+Now we can retrieve this document
+
+```
+> get
+collection name > users
+key > user_1
+id = "user_1"
+last_login_time = 1650929781214
+```
+
+and that's basically a database, right?
 
 ## TODO
 
@@ -62,7 +89,9 @@ SET key value
 - [x] Profile and optimize collection data structure
 - [x] Update protocol
 - [x] Update server
-- [x] Update client
+- [x] Update CLI
+- [ ] Structured read of key type for `get` command in CLI
+- [ ] Add deletion command
 - [ ] Add support for nested schemas
 - [ ] Add support for arrays in schemas
 - [ ] Add async_getaddrinfo to io
@@ -81,3 +110,7 @@ SET key value
       so there's no write overhead
 - [ ] Switch to using epoll instead of select on Linux
 - [ ] Use std:: prefix everywhere for cstdint types
+
+```
+
+```
