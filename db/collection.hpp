@@ -25,6 +25,8 @@ struct Collection {
     void* find(ConstBuffer key);
 
     const Schema& schema() const;
+    std::size_t doc_size() const;
+
     std::size_t count() const;
 
 private:

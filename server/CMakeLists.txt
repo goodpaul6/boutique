@@ -1,9 +1,8 @@
 set(SOURCES
     main.cpp
     server.cpp
-    client_handler.cpp
-    dict.cpp)
+    client_handler.cpp)
 
-add_executable(boutique ${SOURCES})
+add_executable(server ${SOURCES})
 
-target_link_libraries(boutique PRIVATE core io protocol)
+target_link_libraries(server PRIVATE core db io protocol)

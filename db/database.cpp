@@ -11,8 +11,6 @@ const Schema& Database::register_schema(std::string name, Schema schema) {
 
 Collection& Database::create_collection(std::string name, Schema schema) {
     const auto [iter, inserted_new] = m_colls.insert_or_assign(std::move(name), std::move(schema));
-    assert(inserted_new);
-
     return iter->second;
 }
 

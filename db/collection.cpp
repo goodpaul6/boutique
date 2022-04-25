@@ -147,6 +147,8 @@ void* Collection::find(ConstBuffer key) {
 
 const Schema& Collection::schema() const { return m_schema; }
 
+std::size_t Collection::doc_size() const { return m_storage.doc_size(); }
+
 std::size_t Collection::count() const { return m_storage.count(); }
 
 Collection::KeyValue* Collection::put_internal(std::vector<KeyValue>& dest, ConstBuffer key,

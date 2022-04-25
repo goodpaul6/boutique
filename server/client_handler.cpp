@@ -9,6 +9,7 @@
 #include "core/bind_front.hpp"
 #include "core/const_buffer.hpp"
 #include "core/logger.hpp"
+#include "core/overloaded_visitor.hpp"
 #include "io/helpers.hpp"
 #include "protocol/binary_protocol.hpp"
 #include "server.hpp"
@@ -79,24 +80,67 @@ void ClientHandler::recv_handler(int len) {
         assert(rc_res == ReadResult::SUCCESS);
 
         std::visit(
-            [&](auto&& v) {
-                using T = std::decay_t<decltype(v)>;
+            OverloadedVisitor{
+                [&](RegisterSchemaCommand cmd) {
+                    m_server->db().register_schema(std::string{cmd.name}, std::move(cmd.schema));
+                    write_and_send(SuccessResponse{});
+                },
+                [&](CreateCollectionCommand cmd) {
+                    auto* schema = m_server->db().schema(std::string{cmd.schema_name});
 
-                if constexpr (std::is_same_v<T, GetCommand>) {
-                    auto value = m_server->dict().get(std::string{v.key});
-
-                    if (value) {
-                        write_and_send(FoundResponse{*value});
-                    } else {
+                    if (!schema) {
+                        // TODO Create SchemaNotFoundResponse
                         write_and_send(NotFoundResponse{});
+                        return;
                     }
-                } else if constexpr (std::is_same_v<T, SetCommand>) {
-                    m_server->dict().set(std::string{v.key}, std::string{v.value});
+
+                    m_server->db().create_collection(std::string{cmd.name}, *schema);
+                    write_and_send(SuccessResponse{});
+                },
+                [&](GetCollectionSchemaCommand cmd) {
+                    auto* coll = m_server->db().collection(std::string{cmd.name});
+
+                    if (!coll) {
+                        write_and_send(NotFoundResponse{});
+                        return;
+                    }
+
+                    write_and_send(SchemaResponse{coll->schema()});
+                },
+                [&](GetCommand cmd) {
+                    auto* coll = m_server->db().collection(std::string{cmd.coll_name});
+
+                    if (!coll) {
+                        write_and_send(NotFoundResponse{});
+                        return;
+                    }
+
+                    auto* found = coll->find(cmd.key);
+
+                    if (!found) {
+                        write_and_send(NotFoundResponse{});
+                        return;
+                    }
+
+                    write_and_send(FoundResponse{
+                        ConstBuffer{reinterpret_cast<const char*>(found), coll->doc_size()}});
+                },
+                [&](PutCommand cmd) {
+                    auto* coll = m_server->db().collection(std::string{cmd.coll_name});
+
+                    if (!coll) {
+                        write_and_send(NotFoundResponse{});
+                        return;
+                    }
+
+                    // TODO Add checks to make sure data len is the same as schema size
+
+                    coll->put(cmd.value.data);
 
                     write_and_send(SuccessResponse{});
-                }
-            },
-            cmd);
+                },
+                [](auto) {}},
+            std::move(cmd));
 
         m_stream.consume(cmd_buf.data - m_stream.data());
     }

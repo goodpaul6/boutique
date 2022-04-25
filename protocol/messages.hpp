@@ -10,12 +10,17 @@ namespace boutique {
 
 struct RegisterSchemaCommand {
     std::string_view name;
+    // TODO Create SchemaView type that can be a view into the stream buffer
     Schema schema;
 };
 
 struct CreateCollectionCommand {
     std::string_view name;
     std::string_view schema_name;
+};
+
+struct GetCollectionSchemaCommand {
+    std::string_view name;
 };
 
 struct GetCommand {
@@ -29,7 +34,7 @@ struct PutCommand {
 };
 
 using Command = std::variant<std::monostate, RegisterSchemaCommand, CreateCollectionCommand,
-                             GetCommand, PutCommand>;
+                             GetCollectionSchemaCommand, GetCommand, PutCommand>;
 
 struct SuccessResponse {};
 struct InvalidCommandResponse {};
@@ -39,7 +44,11 @@ struct FoundResponse {
     ConstBuffer value;
 };
 
+struct SchemaResponse {
+    Schema schema;
+};
+
 using Response = std::variant<std::monostate, SuccessResponse, InvalidCommandResponse,
-                              NotFoundResponse, FoundResponse>;
+                              NotFoundResponse, FoundResponse, SchemaResponse>;
 
 }  // namespace boutique

@@ -18,7 +18,7 @@ void Server::run() {
     m_ioc.run();
 }
 
-Dict& Server::dict() { return m_dict; }
+Database& Server::db() { return m_db; }
 
 void Server::accept_handler(Socket socket) {
     auto clients_end =

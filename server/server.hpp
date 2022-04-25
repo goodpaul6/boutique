@@ -3,7 +3,7 @@
 #include <list>
 
 #include "client_handler.hpp"
-#include "dict.hpp"
+#include "db/database.hpp"
 #include "io/context.hpp"
 #include "io/socket.hpp"
 
@@ -16,10 +16,10 @@ struct Server {
 
     void run();
 
-    Dict& dict();
+    Database& db();
 
 private:
-    Dict m_dict;
+    Database m_db;
 
     Socket m_socket;
     IOContext m_ioc;

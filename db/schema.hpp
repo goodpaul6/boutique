@@ -94,6 +94,9 @@ struct ImplType<Float64Type> {
     using Type = double;
 };
 
+template <typename T>
+using impl_type_t = typename ImplType<T>::Type;
+
 struct Field {
     std::string name;
     FieldType type;

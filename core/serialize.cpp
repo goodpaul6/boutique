@@ -36,14 +36,6 @@ std::optional<LengthPrefixedString> read(ConstBuffer& c) {
     return s;
 }
 
-void write(WriteFn write_fn, uint8_t v) { *write_fn(1) = v; }
-
-void write(WriteFn write_fn, uint32_t v) {
-    auto* dest = write_fn(sizeof(v));
-
-    std::memcpy(dest, reinterpret_cast<const char*>(&v), sizeof(v));
-}
-
 void write(WriteFn write_fn, const NullTerminatedString& s) {
     auto* dest = write_fn(s.s.size() + 1);
 

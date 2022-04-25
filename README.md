@@ -60,6 +60,9 @@ SET key value
 - [x] Create database object for housing schemas and collections
 - [x] Create open-addressed hash table as storage for collection
 - [x] Profile and optimize collection data structure
+- [x] Update protocol
+- [x] Update server
+- [x] Update client
 - [ ] Add support for nested schemas
 - [ ] Add support for arrays in schemas
 - [ ] Add async_getaddrinfo to io

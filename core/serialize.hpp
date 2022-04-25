@@ -46,8 +46,11 @@ std::optional<NullTerminatedString> read(ConstBuffer& c);
 template <>
 std::optional<LengthPrefixedString> read(ConstBuffer& c);
 
-void write(WriteFn write_fn, uint8_t v);
-void write(WriteFn write_fn, uint32_t v);
+template <typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+void write(WriteFn write_fn, T v) {
+    std::memcpy(write_fn(sizeof(v)), &v, sizeof(v));
+}
+
 void write(WriteFn write_fn, const NullTerminatedString& s);
 void write(WriteFn write_fn, const LengthPrefixedString& s);
 
