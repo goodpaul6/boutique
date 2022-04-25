@@ -110,7 +110,3 @@ and that's basically a database, right?
       so there's no write overhead
 - [ ] Switch to using epoll instead of select on Linux
 - [ ] Use std:: prefix everywhere for cstdint types
-
-```
-
-```
