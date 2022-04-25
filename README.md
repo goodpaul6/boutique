@@ -3,7 +3,7 @@
 A simple in-memory database. Stores collections of flat, pre-defined documents
 that can be queried and written to easily.
 
-## Example
+## CLI Example
 
 _Note that the current CLI is intentionally barebones, and the syntax is all subject to change._
 
