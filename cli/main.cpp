@@ -82,6 +82,47 @@ int main(int argc, char** argv) {
 
         std::vector<char> buf;
 
+        const auto read_write_field = [&](auto tag, std::string_view name, const auto& field,
+                                          auto& write_fn) {
+            using T = typename decltype(tag)::Type;
+
+            if (!std::holds_alternative<T>(field.type)) {
+                return;
+            }
+
+            prompt("value for {} {} > ", name, field.name);
+
+            std::getline(std::cin, str);
+
+            if constexpr (std::is_same_v<T, StringType>) {
+                static_assert(std::is_same_v<LengthPrefixType, decltype(StringHeader::len)>);
+
+                auto cap = std::get<StringType>(field.type).capacity;
+
+                if (str.size() > cap) {
+                    std::cerr << "String too long to fit in type, trimming to " << cap
+                              << " bytes.\n";
+                    str = str.substr(0, cap);
+                }
+
+                write(write_fn, LengthPrefixedString{str});
+            } else {
+                if constexpr (std::is_same_v<T, BoolType>) {
+                    write(write_fn, str == "true");
+                } else if constexpr (std::is_integral_v<impl_type_t<T>>) {
+                    if constexpr (std::is_unsigned_v<impl_type_t<T>>) {
+                        write(write_fn, static_cast<impl_type_t<T>>(std::stoull(str)));
+                    } else {
+                        write(write_fn, static_cast<impl_type_t<T>>(std::stoll(str)));
+                    }
+                } else if constexpr (std::is_floating_point_v<impl_type_t<T>>) {
+                    write(write_fn, static_cast<impl_type_t<T>>(std::stod(str)));
+                }
+
+                // TODO Check exhaustiveness with a static_assert
+            }
+        };
+
         Command cmd;
 
         if (str == "schema") {
@@ -177,13 +218,35 @@ int main(int argc, char** argv) {
         } else if (str == "get") {
             prompt("collection name > ");
 
-            std::getline(std::cin, str);
-
-            prompt("key > ");
-
             std::getline(std::cin, str2);
 
-            cmd = GetCommand{str, ConstBuffer{str2}};
+            auto found = schemas.find(str2);
+
+            if (found == schemas.end()) {
+                std::cerr << "Run colschema to cache the schema for this collection first.\n";
+                continue;
+            }
+
+            const auto& field = found->second.fields[found->second.key_field_index];
+
+            buf.resize(size(field.type));
+
+            auto buf_writer = [&](std::size_t len) { return buf.data(); };
+
+            for_each_type_name([&](auto tag, std::string_view name) {
+                read_write_field(tag, name, field, buf_writer);
+            });
+
+            ConstBuffer key{buf.data(), buf.size()};
+
+            // HACK If the type is a string, we actually only supply *length* bytes
+            // as the key, otherwise it will end up hashing the entire capacity,
+            // including the zeros. We also assume 'str' will hold the string here.
+            if (std::holds_alternative<StringType>(field.type)) {
+                key = {buf.data() + sizeof(LengthPrefixType), str.size()};
+            }
+
+            cmd = GetCommand{str2, key};
         } else if (str == "put") {
             prompt("collection name > ");
 
@@ -209,44 +272,7 @@ int main(int argc, char** argv) {
                 auto buf_writer = [&](std::size_t len) { return buf.data() + write_pos; };
 
                 for_each_type_name([&](auto tag, std::string_view name) {
-                    using T = typename decltype(tag)::Type;
-
-                    if (!std::holds_alternative<T>(field.type)) {
-                        return;
-                    }
-
-                    prompt("value for {} {} > ", name, field.name);
-
-                    std::getline(std::cin, str);
-
-                    if constexpr (std::is_same_v<T, StringType>) {
-                        static_assert(
-                            std::is_same_v<LengthPrefixType, decltype(StringHeader::len)>);
-
-                        auto cap = std::get<StringType>(field.type).capacity;
-
-                        if (str.size() > cap) {
-                            std::cerr << "String too long to fit in type, trimming to " << cap
-                                      << " bytes.\n";
-                            str = str.substr(0, cap);
-                        }
-
-                        write(buf_writer, LengthPrefixedString{str});
-                    } else {
-                        if constexpr (std::is_same_v<T, BoolType>) {
-                            write(buf_writer, str == "true");
-                        } else if constexpr (std::is_integral_v<impl_type_t<T>>) {
-                            if constexpr (std::is_unsigned_v<impl_type_t<T>>) {
-                                write(buf_writer, static_cast<impl_type_t<T>>(std::stoull(str)));
-                            } else {
-                                write(buf_writer, static_cast<impl_type_t<T>>(std::stoll(str)));
-                            }
-                        } else if constexpr (std::is_floating_point_v<impl_type_t<T>>) {
-                            write(buf_writer, static_cast<impl_type_t<T>>(std::stod(str)));
-                        }
-
-                        // TODO Check exhaustiveness with a static_assert
-                    }
+                    read_write_field(tag, name, field, buf_writer);
                 });
             }
 
