@@ -215,6 +215,17 @@ ReadResult read(ConstBuffer& cursor, Command& cmd) {
             cmd = PutCommand{coll_name->s, ConstBuffer{value->s}};
         } break;
 
+        case type_index_v<DeleteCommand, Command>: {
+            auto coll_name = read<LengthPrefixedString>(c);
+            auto key = read<LengthPrefixedString>(c);
+
+            if (!coll_name || !key) {
+                return ReadResult::INCOMPLETE;
+            }
+
+            cmd = DeleteCommand{coll_name->s, ConstBuffer{key->s}};
+        } break;
+
         default:
             return ReadResult::INVALID;
     }
@@ -298,6 +309,10 @@ void write(WriteFn write_fn, const Command& cmd) {
                    [&](const PutCommand& cmd) {
                        write(write_fn, LengthPrefixedString{cmd.coll_name});
                        write(write_fn, LengthPrefixedString{{cmd.value.data, cmd.value.len}});
+                   },
+                   [&](const DeleteCommand& cmd) {
+                       write(write_fn, LengthPrefixedString{cmd.coll_name});
+                       write(write_fn, LengthPrefixedString{{cmd.key.data, cmd.key.len}});
                    },
                    [](auto) {}},
                cmd);

@@ -215,7 +215,9 @@ int main(int argc, char** argv) {
             std::getline(std::cin, str);
 
             cmd = GetCollectionSchemaCommand{str};
-        } else if (str == "get") {
+        } else if (str == "get" || str == "delete") {
+            std::string cmd_name{std::move(str)};
+
             prompt("collection name > ");
 
             std::getline(std::cin, str2);
@@ -246,7 +248,11 @@ int main(int argc, char** argv) {
                 key = {buf.data() + sizeof(LengthPrefixType), str.size()};
             }
 
-            cmd = GetCommand{str2, key};
+            if (cmd_name == "get") {
+                cmd = GetCommand{str2, key};
+            } else {
+                cmd = DeleteCommand{str2, key};
+            }
         } else if (str == "put") {
             prompt("collection name > ");
 

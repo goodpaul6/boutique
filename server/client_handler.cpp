@@ -139,6 +139,18 @@ void ClientHandler::recv_handler(int len) {
 
                     write_and_send(SuccessResponse{});
                 },
+                [&](DeleteCommand cmd) {
+                    auto* coll = m_server->db().collection(std::string{cmd.coll_name});
+
+                    if (!coll) {
+                        write_and_send(NotFoundResponse{});
+                        return;
+                    }
+
+                    coll->remove(cmd.key);
+
+                    write_and_send(SuccessResponse{});
+                },
                 [](auto) {}},
             std::move(cmd));
 

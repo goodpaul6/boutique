@@ -91,10 +91,10 @@ and that's basically a database, right?
 - [x] Update server
 - [x] Update CLI
 - [x] Structured read of key type for `get` command in CLI
+- [x] Add deletion command
 - [ ] Figure out a better way to handle 'find' with strings; we currently use ConstBuffer len instead
       of examining the buffer and embedded string length, which is technically inconsistent with how
       we treat all other values
-- [ ] Add deletion command
 - [ ] Add support for nested schemas
 - [ ] Add support for arrays in schemas
 - [ ] Add async_getaddrinfo to io
