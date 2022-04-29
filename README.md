@@ -74,6 +74,15 @@ id = "user_1"
 last_login_time = 1650929781214
 ```
 
+Eventually we'll probably want to delete this data
+
+```
+> delete
+collection name > users
+value for string id > user_1
+Success.
+```
+
 and that's basically a database, right?
 
 ## TODO
@@ -92,17 +101,17 @@ and that's basically a database, right?
 - [x] Update CLI
 - [x] Structured read of key type for `get` command in CLI
 - [x] Add deletion command
+- [x] Separate server from database so that the latter can be embedded in-process
+- [ ] Add support for nested schemas
 - [ ] Figure out a better way to handle 'find' with strings; we currently use ConstBuffer len instead
       of examining the buffer and embedded string length, which is technically inconsistent with how
       we treat all other values
-- [ ] Add support for nested schemas
 - [ ] Add support for arrays in schemas
 - [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io
 - [ ] Add async_listen to io
 - [ ] Add tests for StreamBuf
 - [ ] Key expiry using async timers
-- [ ] Separate server from database so that the latter can be embedded in-process
 - [ ] Gracefully handle non-graceful disconnects from the client
 - [ ] Create a new exception type SocketError
 - [ ] Create a "smart" client which allows for higher performance through eventual
@@ -113,3 +122,7 @@ and that's basically a database, right?
       so there's no write overhead
 - [ ] Switch to using epoll instead of select on Linux
 - [ ] Use std:: prefix everywhere for cstdint types
+
+```
+
+```
