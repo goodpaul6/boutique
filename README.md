@@ -103,10 +103,11 @@ and that's basically a database, right?
 - [x] Add deletion command
 - [x] Separate server from database so that the latter can be embedded in-process
 - [ ] Add support for nested schemas
+- [ ] Add support for arrays in schemas
+- [ ] Add support for `set` command which allows partial updates
 - [ ] Figure out a better way to handle 'find' with strings; we currently use ConstBuffer len instead
       of examining the buffer and embedded string length, which is technically inconsistent with how
       we treat all other values
-- [ ] Add support for arrays in schemas
 - [ ] Add async_getaddrinfo to io
 - [ ] Add async_connect to io
 - [ ] Add async_listen to io
@@ -122,3 +123,4 @@ and that's basically a database, right?
       so there's no write overhead
 - [ ] Switch to using epoll instead of select on Linux
 - [ ] Use std:: prefix everywhere for cstdint types
+- [ ] Create synchronous send_all and recv_all helpers
