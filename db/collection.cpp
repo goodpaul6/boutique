@@ -187,6 +187,10 @@ Collection::KeyValue* Collection::put_internal(std::vector<KeyValue>& dest, Cons
 }
 
 Collection::KeyValue* Collection::find_internal(ConstBuffer key, std::size_t key_hash) {
+    if (m_buckets.empty()) {
+        return nullptr;
+    }
+
     auto idx = key_hash & (m_buckets.size() - 1);
     auto orig_idx = idx;
 
