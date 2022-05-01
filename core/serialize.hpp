@@ -35,7 +35,7 @@ std::optional<T> read(ConstBuffer& c) {
     T v;
     std::memcpy(&v, c.data, sizeof(T));
 
-    c += sizeof(T);
+    c.remove_prefix(sizeof(T));
 
     return v;
 }

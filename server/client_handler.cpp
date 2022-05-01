@@ -41,7 +41,7 @@ void ClientHandler::recv_handler(int len) {
 
     m_stream.append(m_buf, len);
 
-    ConstBuffer cmd_buf{m_stream};
+    auto cmd_buf = as_const_buffer(m_stream);
 
     Command cmd;
 
@@ -96,6 +96,16 @@ void ClientHandler::recv_handler(int len) {
 
                     m_server->db().create_collection(std::string{cmd.name}, *schema);
                     write_and_send(SuccessResponse{});
+                },
+                [&](GetSchemaCommand cmd) {
+                    auto* schema = m_server->db().schema(std::string{cmd.name});
+
+                    if (!schema) {
+                        write_and_send(NotFoundResponse{});
+                        return;
+                    }
+
+                    write_and_send(SchemaResponse{std::move(*schema)});
                 },
                 [&](GetCollectionSchemaCommand cmd) {
                     auto* coll = m_server->db().collection(std::string{cmd.name});

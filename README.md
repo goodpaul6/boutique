@@ -102,7 +102,9 @@ and that's basically a database, right?
 - [x] Structured read of key type for `get` command in CLI
 - [x] Add deletion command
 - [x] Separate server from database so that the latter can be embedded in-process
+- [x] Replace `ConstBuffer` with `Span` abstraction
 - [ ] Add support for nested schemas
+- [ ] Create C++ client library
 - [ ] Add support for arrays in schemas
 - [ ] Add support for `set` command which allows partial updates
 - [ ] Figure out a better way to handle 'find' with strings; we currently use ConstBuffer len instead

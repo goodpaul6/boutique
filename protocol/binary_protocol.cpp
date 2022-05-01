@@ -12,9 +12,7 @@
 
 namespace {
 
-// FIXME Reading into a default constructed Schema is not really optimal, but I don't want to
-// return an optional because I need to have a separate status for invalid data.
-boutique::ReadResult read(boutique::ConstBuffer& cursor, boutique::Schema& out_schema) {
+boutique::ReadResult read(boutique::ConstBuffer& cursor, boutique::AggregateType& out_agg) {
     using namespace boutique;
 
     auto c = cursor;
@@ -25,9 +23,9 @@ boutique::ReadResult read(boutique::ConstBuffer& cursor, boutique::Schema& out_s
         return ReadResult::INCOMPLETE;
     }
 
-    Schema schema;
+    AggregateType agg;
 
-    schema.fields.reserve(*field_count);
+    agg.reserve(*field_count);
 
     for (std::uint32_t i = 0; i < *field_count; ++i) {
         auto name = boutique::read<LengthPrefixedString>(c);
@@ -37,8 +35,8 @@ boutique::ReadResult read(boutique::ConstBuffer& cursor, boutique::Schema& out_s
             return ReadResult::INCOMPLETE;
         }
 
-        const auto push_field = [&](auto type) {
-            schema.fields.push_back({std::string{name->s}, type});
+        const auto push_field = [&](auto&& type) {
+            agg.push_back({std::string{name->s}, std::forward<decltype(type)>(type)});
         };
 
         // TODO I can use a template metaprogramming thing where I visit
@@ -99,10 +97,42 @@ boutique::ReadResult read(boutique::ConstBuffer& cursor, boutique::Schema& out_s
                 push_field(StringType{*capacity});
             } break;
 
-            default: {
-                return ReadResult::INVALID;
+            case type_index_v<AggregateType, FieldType>: {
+                AggregateType agg;
+
+                auto res = read(c, agg);
+
+                if (res != ReadResult::SUCCESS) {
+                    return res;
+                }
+
+                push_field(std::move(agg));
             } break;
+
+            default:
+                return ReadResult::INVALID;
         }
+    }
+
+    out_agg = std::move(agg);
+    cursor = c;
+
+    return ReadResult::SUCCESS;
+}
+
+// FIXME Reading into a default constructed Schema is not really optimal, but I don't want to
+// return an optional because I need to have a separate status for invalid data.
+boutique::ReadResult read(boutique::ConstBuffer& cursor, boutique::Schema& out_schema) {
+    using namespace boutique;
+
+    auto c = cursor;
+
+    Schema schema;
+
+    auto res = read(c, schema.fields);
+
+    if (res != ReadResult::SUCCESS) {
+        return res;
     }
 
     auto key_field_index = boutique::read<std::uint32_t>(c);
@@ -123,20 +153,28 @@ boutique::ReadResult read(boutique::ConstBuffer& cursor, boutique::Schema& out_s
     return ReadResult::SUCCESS;
 }
 
-void write(boutique::WriteFn write_fn, const boutique::Schema& schema) {
+void write(boutique::WriteFn write_fn, const boutique::AggregateType& agg) {
     using namespace boutique;
 
-    write(write_fn, static_cast<std::uint32_t>(schema.fields.size()));
+    write(write_fn, static_cast<std::uint32_t>(agg.size()));
 
-    for (const auto& field : schema.fields) {
+    for (const auto& field : agg) {
         write(write_fn, LengthPrefixedString{field.name});
         write(write_fn, static_cast<std::uint8_t>(field.type.index()));
 
-        if (std::holds_alternative<StringType>(field.type)) {
-            write(write_fn, static_cast<std::uint32_t>(std::get<StringType>(field.type).capacity));
-        }
+        std::visit(
+            OverloadedVisitor{[&](const StringType& s) {
+                                  write(write_fn, static_cast<std::uint32_t>(s.capacity));
+                              },
+                              [&](const AggregateType& a) { ::write(write_fn, a); }, [](auto) {}},
+            field.type);
     }
+}
 
+void write(boutique::WriteFn write_fn, const boutique::Schema& schema) {
+    using namespace boutique;
+
+    write(write_fn, schema.fields);
     write(write_fn, static_cast<std::uint32_t>(schema.key_field_index));
 }
 
@@ -169,7 +207,7 @@ ReadResult read(ConstBuffer& cursor, Command& cmd) {
                 return res;
             }
 
-            cmd = RegisterSchemaCommand{name->s, std::move(schema)};
+            cmd = RegisterSchemaCommand{name->s, schema};
         } break;
 
         case type_index_v<CreateCollectionCommand, Command>: {
@@ -181,6 +219,16 @@ ReadResult read(ConstBuffer& cursor, Command& cmd) {
             }
 
             cmd = CreateCollectionCommand{name->s, schema_name->s};
+        } break;
+
+        case type_index_v<GetSchemaCommand, Command>: {
+            auto name = read<LengthPrefixedString>(c);
+
+            if (!name) {
+                return ReadResult::INCOMPLETE;
+            }
+
+            cmd = GetSchemaCommand{name->s};
         } break;
 
         case type_index_v<GetCollectionSchemaCommand, Command>: {
@@ -201,7 +249,7 @@ ReadResult read(ConstBuffer& cursor, Command& cmd) {
                 return ReadResult::INCOMPLETE;
             }
 
-            cmd = GetCommand{coll_name->s, ConstBuffer{key->s}};
+            cmd = GetCommand{coll_name->s, as_const_buffer(key->s)};
         } break;
 
         case type_index_v<PutCommand, Command>: {
@@ -212,7 +260,7 @@ ReadResult read(ConstBuffer& cursor, Command& cmd) {
                 return ReadResult::INCOMPLETE;
             }
 
-            cmd = PutCommand{coll_name->s, ConstBuffer{value->s}};
+            cmd = PutCommand{coll_name->s, as_const_buffer(value->s)};
         } break;
 
         case type_index_v<DeleteCommand, Command>: {
@@ -223,7 +271,7 @@ ReadResult read(ConstBuffer& cursor, Command& cmd) {
                 return ReadResult::INCOMPLETE;
             }
 
-            cmd = DeleteCommand{coll_name->s, ConstBuffer{key->s}};
+            cmd = DeleteCommand{coll_name->s, as_const_buffer(key->s)};
         } break;
 
         default:
@@ -258,11 +306,22 @@ ReadResult read(ConstBuffer& buffer, Response& res) {
 
         case type_index_v<FoundResponse, Response>: {
             auto value = read<LengthPrefixedString>(b);
+
             if (!value) {
                 return ReadResult::INCOMPLETE;
             }
 
-            res = FoundResponse{ConstBuffer{value->s}};
+            res = FoundResponse{as_const_buffer(value->s)};
+        } break;
+
+        case type_index_v<StringResponse, Response>: {
+            auto value = read<LengthPrefixedString>(b);
+
+            if (!value) {
+                return ReadResult::INCOMPLETE;
+            }
+
+            res = StringResponse{value->s};
         } break;
 
         case type_index_v<SchemaResponse, Response>: {
@@ -290,32 +349,34 @@ void write(WriteFn write_fn, const Command& cmd) {
 
     write(write_fn, static_cast<uint8_t>(cmd.index()));
 
-    std::visit(OverloadedVisitor{
-                   [&](const RegisterSchemaCommand& cmd) {
-                       write(write_fn, LengthPrefixedString{cmd.name});
-                       ::write(write_fn, cmd.schema);
-                   },
-                   [&](const CreateCollectionCommand& cmd) {
-                       write(write_fn, LengthPrefixedString{cmd.name});
-                       write(write_fn, LengthPrefixedString{cmd.schema_name});
-                   },
-                   [&](const GetCollectionSchemaCommand& cmd) {
-                       write(write_fn, LengthPrefixedString{cmd.name});
-                   },
-                   [&](const GetCommand& cmd) {
-                       write(write_fn, LengthPrefixedString{cmd.coll_name});
-                       write(write_fn, LengthPrefixedString{{cmd.key.data, cmd.key.len}});
-                   },
-                   [&](const PutCommand& cmd) {
-                       write(write_fn, LengthPrefixedString{cmd.coll_name});
-                       write(write_fn, LengthPrefixedString{{cmd.value.data, cmd.value.len}});
-                   },
-                   [&](const DeleteCommand& cmd) {
-                       write(write_fn, LengthPrefixedString{cmd.coll_name});
-                       write(write_fn, LengthPrefixedString{{cmd.key.data, cmd.key.len}});
-                   },
-                   [](auto) {}},
-               cmd);
+    std::visit(
+        OverloadedVisitor{
+            [&](const RegisterSchemaCommand& cmd) {
+                write(write_fn, LengthPrefixedString{cmd.name});
+                ::write(write_fn, cmd.schema);
+            },
+            [&](const CreateCollectionCommand& cmd) {
+                write(write_fn, LengthPrefixedString{cmd.name});
+                write(write_fn, LengthPrefixedString{cmd.schema_name});
+            },
+            [&](const GetSchemaCommand& cmd) { write(write_fn, LengthPrefixedString{cmd.name}); },
+            [&](const GetCollectionSchemaCommand& cmd) {
+                write(write_fn, LengthPrefixedString{cmd.name});
+            },
+            [&](const GetCommand& cmd) {
+                write(write_fn, LengthPrefixedString{cmd.coll_name});
+                write(write_fn, LengthPrefixedString{{cmd.key.data, cmd.key.len}});
+            },
+            [&](const PutCommand& cmd) {
+                write(write_fn, LengthPrefixedString{cmd.coll_name});
+                write(write_fn, LengthPrefixedString{{cmd.value.data, cmd.value.len}});
+            },
+            [&](const DeleteCommand& cmd) {
+                write(write_fn, LengthPrefixedString{cmd.coll_name});
+                write(write_fn, LengthPrefixedString{{cmd.key.data, cmd.key.len}});
+            },
+            [](auto) {}},
+        cmd);
 }
 
 void write(WriteFn write_fn, const Response& res) {
@@ -323,12 +384,14 @@ void write(WriteFn write_fn, const Response& res) {
 
     write(write_fn, static_cast<uint8_t>(res.index()));
 
-    std::visit(OverloadedVisitor{
-                   [&](const FoundResponse& res) {
-                       write(write_fn, LengthPrefixedString{{res.value.data, res.value.len}});
-                   },
-                   [&](const SchemaResponse& res) { ::write(write_fn, res.schema); }, [](auto) {}},
-               res);
+    std::visit(
+        OverloadedVisitor{
+            [&](const FoundResponse& res) {
+                write(write_fn, LengthPrefixedString{{res.value.data, res.value.len}});
+            },
+            [&](const StringResponse& res) { write(write_fn, LengthPrefixedString{res.value}); },
+            [&](const SchemaResponse& res) { ::write(write_fn, res.schema); }, [](auto) {}},
+        res);
 }
 
 }  // namespace boutique

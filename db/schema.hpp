@@ -32,9 +32,13 @@ struct StringHeader {
     std::uint32_t len = 0;
 };
 
+struct Field;
+
+using AggregateType = std::vector<Field>;
+
 using FieldType =
     std::variant<BoolType, UInt8Type, UInt16Type, UInt32Type, UInt64Type, Int8Type, Int16Type,
-                 Int32Type, Int64Type, Float32Type, Float64Type, StringType>;
+                 Int32Type, Int64Type, Float32Type, Float64Type, StringType, AggregateType>;
 
 template <typename T>
 struct ImplType;
@@ -103,16 +107,19 @@ struct Field {
 };
 
 struct Schema {
-    std::vector<Field> fields;
+    AggregateType fields;
     std::uint32_t key_field_index = 0;
 };
 
 std::size_t alignment(const FieldType& type);
+std::size_t alignment(const AggregateType& agg);
 std::size_t alignment(const Schema& schema);
 
 std::size_t size(const FieldType& type);
+std::size_t size(const AggregateType& agg);
 std::size_t size(const Schema& schema);
 
+std::size_t offset(const AggregateType& agg, std::uint32_t field_index);
 std::size_t offset(const Schema& schema, std::uint32_t field_index);
 
 }  // namespace boutique

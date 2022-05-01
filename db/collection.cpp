@@ -33,6 +33,10 @@ Collection::Collection(Schema schema)
                     return std::hash<std::string_view>{}({buf.data, buf.len});
                 };
             },
+            [](AggregateType) {
+                // Aggregate should never be the key field
+                assert(false);
+            },
             [&](auto&& v) {
                 using T = typename ImplType<std::decay_t<decltype(v)>>::Type;
 

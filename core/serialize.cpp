@@ -29,9 +29,13 @@ std::optional<LengthPrefixedString> read(ConstBuffer& c) {
         return std::nullopt;
     }
 
+    if (c.len < *len) {
+        return std::nullopt;
+    }
+
     LengthPrefixedString s{{c.data, *len}};
 
-    c += *len;
+    c.remove_prefix(*len);
 
     return s;
 }
