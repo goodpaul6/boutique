@@ -145,9 +145,13 @@ void ClientHandler::recv_handler(int len) {
 
                     // TODO Add checks to make sure data len is the same as schema size
 
-                    coll->put(cmd.value.data);
+                    auto* value = coll->put(cmd.value.data);
 
-                    write_and_send(SuccessResponse{});
+                    if (value) {
+                        write_and_send(SuccessResponse{});
+                    } else {
+                        write_and_send(FailedResponse{});
+                    }
                 },
                 [&](DeleteCommand cmd) {
                     auto* coll = m_server->db().collection(std::string{cmd.coll_name});

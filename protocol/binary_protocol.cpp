@@ -296,6 +296,10 @@ ReadResult read(ConstBuffer& buffer, Response& res) {
             res = SuccessResponse{};
             break;
 
+        case type_index_v<FailedResponse, Response>:
+            res = FailedResponse{};
+            break;
+
         case type_index_v<InvalidCommandResponse, Response>:
             res = InvalidCommandResponse{};
             break;

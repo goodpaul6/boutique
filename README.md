@@ -104,8 +104,11 @@ and that's basically a database, right?
 - [x] Separate server from database so that the latter can be embedded in-process
 - [x] Replace `ConstBuffer` with `Span` abstraction
 - [x] Add support for nested schemas
-- [ ] Create C++ client library
+- [x] Create failed response for put command failures
 - [ ] Add support for arrays in schemas
+- [ ] Create C++ client library
+- [ ] Add a multiget command
+- [ ] Store metrics about average query time
 - [ ] Add support for `set` command which allows partial updates
 - [ ] Figure out a better way to handle 'find' with strings; we currently use ConstBuffer len instead
       of examining the buffer and embedded string length, which is technically inconsistent with how

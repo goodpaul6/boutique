@@ -47,6 +47,10 @@ using Command =
                  GetCollectionSchemaCommand, GetCommand, PutCommand, DeleteCommand>;
 
 struct SuccessResponse {};
+
+// Generic failure, no good reason for out
+struct FailedResponse {};
+
 struct InvalidCommandResponse {};
 struct NotFoundResponse {};
 
@@ -62,7 +66,8 @@ struct SchemaResponse {
     Schema schema;
 };
 
-using Response = std::variant<std::monostate, SuccessResponse, InvalidCommandResponse,
-                              NotFoundResponse, FoundResponse, StringResponse, SchemaResponse>;
+using Response =
+    std::variant<std::monostate, SuccessResponse, FailedResponse, InvalidCommandResponse,
+                 NotFoundResponse, FoundResponse, StringResponse, SchemaResponse>;
 
 }  // namespace boutique
